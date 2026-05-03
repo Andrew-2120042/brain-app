@@ -1,0 +1,30 @@
+name: BrainLaBomb
+options:
+  bundleIdPrefix: com.brainla
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "15"
+targets:
+  BrainLaBomb:
+    type: application
+    platform: iOS
+    sources:
+      - path: BrainLaBomb
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.brainla.bomb
+        SWIFT_VERSION: "5.9"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: ""
+        INFOPLIST_FILE: BrainLaBomb/Info.plist
+    info:
+      path: BrainLaBomb/Info.plist
+      properties:
+        UILaunchScreen: {}
+        NSMotionUsageDescription: "Used to animate the decision card based on how you hold your phone"
+        UIApplicationSupportsIndirectInputEvents: true
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIAppFonts:
+          - Poppins-Regular.ttf
+          - Poppins-Medium.ttf
