@@ -1,48 +1,52 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State private var showInput   = false
-    @State private var processing  = false
-    @State private var followUpQ:  String? = nil
-    @State private var pendingQ:   String  = ""
-    @State private var result:     DecisionResult? = nil
+    @StateObject private var viewModel = AppViewModel()
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
 
-            if let r = result {
-                DecisionCardView(result: r) {
-                    withAnimation(.easeInOut(duration: 0.35)) { result = nil }
+            switch viewModel.appState {
+            case .result(let r):
+                DecisionCardView(result: r, originalQuestion: viewModel.originalQuestion) {
+                    withAnimation(.easeInOut(duration: 0.35)) { viewModel.reset() }
                 }
                 .transition(.opacity)
 
-            } else if let q = followUpQ {
+            case .question(let q):
                 QuestionCardView(
                     question: q,
-                    onSubmit: { answer in runSecondPass(answer: answer) },
-                    onSkip:   { runSecondPass(answer: "") }
+                    onSubmit: { answer in viewModel.submitFollowUp(answer: answer) },
+                    onSkip:   { viewModel.skipFollowUp() }
                 )
                 .transition(.opacity)
 
-            } else if processing {
+            case .processingFirst, .processingSecond:
                 SimulatingView()
                     .transition(.opacity)
 
-            } else if showInput {
+            case .input:
                 InputPageView { question in
-                    pendingQ = question
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        showInput  = false
-                        processing = true
+                        viewModel.submitQuestion(question)
                     }
-                    runFirstPass(question: question)
                 }
                 .transition(.opacity)
 
-            } else {
+            case .error(let msg):
+                ErrorView(message: msg) {
+                    viewModel.retry()
+                } onDismiss: {
+                    viewModel.reset()
+                }
+                .transition(.opacity)
+
+            case .home:
                 HomeView(isProcessing: false) {
-                    withAnimation(.easeInOut(duration: 0.3)) { showInput = true }
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        viewModel.appState = .input
+                    }
                 }
                 .transition(.opacity)
             }
@@ -50,48 +54,70 @@ struct ContentView: View {
         .animation(.easeInOut(duration: 0.35), value: screenKey)
     }
 
-    // composite key so a single animation modifier drives all transitions
     private var screenKey: Int {
-        if result    != nil  { return 4 }
-        if followUpQ != nil  { return 3 }
-        if processing        { return 2 }
-        if showInput         { return 1 }
-        return 0
-    }
-
-    // ── Pass 1 ────────────────────────────────────────────────────────────────
-    private func runFirstPass(question: String) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-            let pass = DecisionEngine.firstPass(question: question)
-            if pass.needsQuestion, let fq = pass.followUpQuestion {
-                withAnimation(.easeInOut(duration: 0.35)) {
-                    processing = false
-                    followUpQ  = fq
-                }
-            } else {
-                let r = DecisionEngine.decide(question: question)
-                withAnimation(.easeInOut(duration: 0.35)) {
-                    processing = false
-                    result     = r
-                }
-            }
+        switch viewModel.appState {
+        case .result:           return 5
+        case .question:         return 4
+        case .processingSecond: return 3
+        case .processingFirst:  return 2
+        case .input:            return 1
+        case .error:            return 6
+        case .home:             return 0
         }
     }
+}
 
-    // ── Pass 2 ────────────────────────────────────────────────────────────────
-    private func runSecondPass(answer: String) {
-        // keyboard is already dismissed by dismissAndAct — transition both states together
-        withAnimation(.easeInOut(duration: 0.3)) {
-            followUpQ  = nil
-            processing = true
-        }
-        let combined = answer.isEmpty ? pendingQ : "\(pendingQ). \(answer)"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-            let r = DecisionEngine.decide(question: combined)
-            withAnimation(.easeInOut(duration: 0.35)) {
-                processing = false
-                result     = r
+// MARK: - Error View
+private struct ErrorView: View {
+    let message: String
+    let onRetry: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        ZStack {
+            Color(red: 0.039, green: 0.039, blue: 0.039).ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 0) {
+                Text("SOMETHING WENT WRONG")
+                    .font(.custom("HelveticaNeue", size: 12))
+                    .foregroundColor(Color(white: 0.4))
+                    .tracking(1.5)
+                    .padding(.top, 64)
+                    .padding(.horizontal, 28)
+
+                Text(message)
+                    .font(.custom("HelveticaNeue", size: 18))
+                    .foregroundColor(Color(white: 0.7))
+                    .lineSpacing(6)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 24)
+                    .padding(.horizontal, 28)
+
+                Spacer()
+
+                VStack(spacing: 12) {
+                    Button(action: onRetry) {
+                        Text("Try again")
+                            .font(.custom("HelveticaNeue", size: 16))
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    Button(action: onDismiss) {
+                        Text("Back to home")
+                            .font(.custom("HelveticaNeue", size: 14))
+                            .foregroundColor(Color(white: 0.4))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                .padding(.horizontal, 28)
+                .padding(.bottom, 52)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }

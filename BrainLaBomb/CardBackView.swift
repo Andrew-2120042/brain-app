@@ -2,7 +2,10 @@ import SwiftUI
 
 struct CardBackView: View {
     let result: DecisionResult
+    let originalQuestion: String
     @State private var showStories = false
+    @State private var showChat = false
+    @State private var chatSessionID = UUID()
 
     var body: some View {
         GeometryReader { geo in
@@ -57,26 +60,48 @@ struct CardBackView: View {
 
                 Spacer()
 
-                // ── View full report button ───────────────────────────
-                Button { showStories = true } label: {
-                    HStack {
-                        Text("view full report")
-                            .font(.custom("Poppins-Regular", size: 15))
-                            .foregroundColor(.black)
-                        Spacer()
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.black)
+                // ── Buttons ───────────────────────────────────────────
+                VStack(spacing: 8) {
+                    Button { chatSessionID = UUID(); showChat = true } label: {
+                        HStack {
+                            Text("chat about this")
+                                .font(.custom("Poppins-Regular", size: 15))
+                                .foregroundColor(.white)
+                            Spacer()
+                        }
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 16)
+                        .background(Color(red: 0.039, green: 0.039, blue: 0.039))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(Color.white, lineWidth: 1))
                     }
-                    .padding(.horizontal, 22)
-                    .padding(.vertical, 16)
-                    .background(Color.white)
-                    .clipShape(Capsule())
+                    .buttonStyle(PlainButtonStyle())
+
+                    Button { showStories = true } label: {
+                        HStack {
+                            Text("view full report")
+                                .font(.custom("Poppins-Regular", size: 15))
+                                .foregroundColor(.black)
+                            Spacer()
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.black)
+                        }
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 16)
+                        .background(Color.white)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
                 .padding(.horizontal, 18)
                 .padding(.bottom, 20)
                 .fullScreenCover(isPresented: $showStories) {
                     StoriesView(result: result)
+                }
+                .fullScreenCover(isPresented: $showChat) {
+                    ChatView(originalQuestion: originalQuestion, decisionResult: result)
+                        .id(chatSessionID)
                 }
             }
         }

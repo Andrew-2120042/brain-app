@@ -5,11 +5,59 @@ struct HomeView: View {
     let onTap: () -> Void
 
     @State private var homeVersion: Int = 0
+    @State private var showHistory = false
+    @State private var historyDragOffset: CGFloat = 0
+    @AppStorage("debug_useMockData") private var useMockData: Bool = true
 
     private let bgURL  = Bundle.main.url(forResource: "home_bg",  withExtension: "mp4")!
     private let bgURL5 = Bundle.main.url(forResource: "home_bg5", withExtension: "mp4")!
 
+    private var historyXOffset: CGFloat {
+        let sw = UIScreen.main.bounds.width
+        return showHistory ? max(0, historyDragOffset) : -sw
+    }
+
+    private var historyDragGesture: some Gesture {
+        DragGesture()
+            .onChanged { v in
+                if v.translation.width > 0 { historyDragOffset = v.translation.width }
+            }
+            .onEnded { v in
+                let sw = UIScreen.main.bounds.width
+                let dismiss = v.translation.width > sw * 0.3
+                    || v.predictedEndTranslation.width > sw * 0.5
+                if dismiss {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.9)) {
+                        historyDragOffset = sw
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.26) {
+                        showHistory = false
+                        historyDragOffset = 0
+                    }
+                } else {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                        historyDragOffset = 0
+                    }
+                }
+            }
+    }
+
     var body: some View {
+        ZStack(alignment: .leading) {
+            homeScreen
+
+            HistoryPanelView(isPresented: $showHistory)
+                .offset(x: historyXOffset)
+                .ignoresSafeArea()
+                .gesture(historyDragGesture)
+                .allowsHitTesting(showHistory)
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showHistory)
+    }
+
+    // MARK: - Home Screen
+
+    private var homeScreen: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             if homeVersion == 0 {
@@ -20,10 +68,34 @@ struct HomeView: View {
 
             version1
 
-            // version toggle (top-right)
             VStack {
-                HStack {
+                HStack(alignment: .center) {
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            showHistory = true
+                        }
+                    } label: {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white.opacity(0.7))
+                    }
+
+                    Button {
+                        useMockData.toggle()
+                    } label: {
+                        Text(useMockData ? "MOCK" : "LIVE")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(useMockData ? Color(white: 0.9) : Color(red: 0.4, green: 1.0, blue: 0.5))
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(
+                                (useMockData ? Color(white: 0.18) : Color(red: 0.1, green: 0.25, blue: 0.12))
+                                    .clipShape(Capsule())
+                            )
+                    }
+                    .padding(.leading, 8)
+
                     Spacer()
+
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) { homeVersion = (homeVersion + 1) % 2 }
                     } label: {
@@ -33,14 +105,17 @@ struct HomeView: View {
                             .padding(.horizontal, 10).padding(.vertical, 5)
                             .background(Color(white: 0.12).clipShape(Capsule()))
                     }
-                    .padding(.top, 62).padding(.trailing, 24)
                 }
+                .padding(.top, 62)
+                .padding(.horizontal, 20)
+
                 Spacer()
             }
         }
     }
 
-    // ── Version 1 ─────────────────────────────────────────────────────────────
+    // MARK: - Version 1
+
     private var version1: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer()
@@ -82,7 +157,8 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    // ── Version 2 ─────────────────────────────────────────────────────────────
+    // MARK: - Version 2
+
     private var version2: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer()
@@ -120,7 +196,7 @@ struct HomeView: View {
     }
 }
 
-// MARK: – Processing indicator
+// MARK: - Processing indicator
 
 struct ProcessingView: View {
     @State private var dotCount = 1

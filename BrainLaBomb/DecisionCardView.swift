@@ -4,8 +4,9 @@ import CoreMotion
 private let layoutLabels = ["A", "B", "C", "D", "E"]
 
 struct DecisionCardView: View {
-    let result:  DecisionResult
-    let onReset: () -> Void
+    let result:          DecisionResult
+    let originalQuestion: String
+    let onReset:         () -> Void
 
     @State private var layoutIndex: Int     = 0
     @State private var cardScale: CGFloat   = 0.88
@@ -119,7 +120,7 @@ struct DecisionCardView: View {
     // ── Card ──────────────────────────────────────────────────────────────────
     private var floatGlow: some View {
         ZStack {
-            CardBackView(result: result)
+            CardBackView(result: result, originalQuestion: originalQuestion)
                 .overlay(RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
                 .rotation3DEffect(.degrees(cardAngle + 180), axis: (0, 1, 0), perspective: 1.1)

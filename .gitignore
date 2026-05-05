@@ -1,3 +1,6 @@
+# Secrets — never commit API keys
+BrainLaBomb/Secrets.swift
+
 # Xcode
 *.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
