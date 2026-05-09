@@ -60,6 +60,7 @@ private extension View {
 struct ChatView: View {
     let originalQuestion: String
     let decisionResult: DecisionResult
+    var onNewThink: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var messages: [ChatBubble] = []
@@ -67,6 +68,7 @@ struct ChatView: View {
     @State private var isLoading: Bool = false
     @State private var showStories: Bool = false
     @FocusState private var inputFocused: Bool
+    @State private var didAddContextCard = false
 
     // Gyro
     @State private var tiltX: Double = 0
@@ -75,14 +77,14 @@ struct ChatView: View {
 
     var body: some View {
         ZStack {
-            Color(hex: "#0A0A0A").ignoresSafeArea()
+            Color.black.ignoresSafeArea()
 
             VStack(spacing: 0) {
                 headerView
 
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(spacing: 16) {
+                        VStack(spacing: 16) {
                             ForEach(messages) { bubble in
                                 messageBubbleView(bubble)
                                     .id(bubble.id)
@@ -94,18 +96,24 @@ struct ChatView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 16)
+                        .frame(maxWidth: .infinity)
                     }
                     .scrollDismissesKeyboard(.immediately)
+                    .simultaneousGesture(TapGesture().onEnded { inputFocused = false })
                     .onChange(of: messages.count) { _ in
-                        withAnimation {
-                            if let lastId = messages.last?.id {
-                                proxy.scrollTo(lastId, anchor: .bottom)
+                        DispatchQueue.main.async {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                if let lastId = messages.last?.id {
+                                    proxy.scrollTo(lastId, anchor: .bottom)
+                                }
                             }
                         }
                     }
                     .onChange(of: isLoading) { _ in
-                        withAnimation {
-                            if isLoading { proxy.scrollTo("typing", anchor: .bottom) }
+                        DispatchQueue.main.async {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                if isLoading { proxy.scrollTo("typing", anchor: .bottom) }
+                            }
                         }
                     }
                 }
@@ -113,16 +121,28 @@ struct ChatView: View {
                 inputBar
             }
         }
-        .onTapGesture { inputFocused = false }
         .onAppear {
-            messages.append(ChatBubble(content: "", isUser: false, isContextCard: true))
+            if !didAddContextCard {
+                didAddContextCard = true
+                messages.append(ChatBubble(content: "", isUser: false, isContextCard: true))
+            }
             startGyro()
         }
         .onDisappear {
             Self.motion.stopDeviceMotionUpdates()
         }
         .fullScreenCover(isPresented: $showStories) {
-            StoriesView(result: decisionResult)
+            StoriesView(
+                result: decisionResult,
+                onContinueInChat: { showStories = false },
+                onNewThink: {
+                    showStories = false
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        onNewThink?()
+                    }
+                }
+            )
         }
     }
 
@@ -339,6 +359,11 @@ struct ChatView: View {
     // MARK: - API
 
     private func fetchChatReply(userMessage: String) async throws -> String {
+        if Constants.useMockData {
+            try await Task.sleep(nanoseconds: 800_000_000)
+            return "That's a fair question. The core issue here is that the short-term gain doesn't offset the long-term cost to your energy. Trust the original read."
+        }
+
         let systemPrompt = """
         You are a decision-making brain. You already gave this person a decision.
         Now they are asking follow up questions about it.
@@ -359,12 +384,12 @@ struct ChatView: View {
         Never say I understand, it seems like, that's a great question.
         """
 
-        let recentMessages = messages.suffix(10)
-        var apiMessages: [[String: Any]] = recentMessages.compactMap { bubble in
+        // Build history from messages already in state (user message was appended before this call)
+        // Do NOT append userMessage again — that would create two consecutive user turns which the API rejects
+        let apiMessages: [[String: Any]] = messages.suffix(10).compactMap { bubble in
             guard !bubble.isContextCard else { return nil }
             return ["role": bubble.isUser ? "user" : "assistant", "content": bubble.content]
         }
-        apiMessages.append(["role": "user", "content": userMessage])
 
         let body: [String: Any] = [
             "model": Constants.model,

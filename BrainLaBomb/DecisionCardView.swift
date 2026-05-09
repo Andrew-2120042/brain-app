@@ -4,17 +4,22 @@ import CoreMotion
 private let layoutLabels = ["A", "B", "C", "D", "E"]
 
 struct DecisionCardView: View {
-    let result:          DecisionResult
-    let originalQuestion: String
-    let onReset:         () -> Void
+    let result:             DecisionResult
+    let originalQuestion:   String
+    let onReset:            () -> Void
+    var allowSwipeDismiss:  Bool = true
 
     @State private var layoutIndex: Int     = 0
-    @State private var cardScale: CGFloat   = 0.88
+    @State private var cardScale: CGFloat   = 0.92
     @State private var cardAngle: Double    = 0
     @State private var tiltX:     Double    = 0
     @State private var tiltY:     Double    = 0
     @State private var dragBase:  Double    = 0
     @State private var dragStarted          = false
+
+    // Arrival animation
+    @State private var cardOffset: CGFloat  = UIScreen.main.bounds.height + 200
+    @State private var cardOpacity: Double  = 0
 
     private static let motion = CMMotionManager()
 
@@ -32,7 +37,7 @@ struct DecisionCardView: View {
 
             VStack(alignment: .leading, spacing: 0) {
                 HStack {
-                    Button(action: onReset) {
+                    Button(action: dismissCard) {
                         HStack(spacing: 5) {
                             Image(systemName: "chevron.left")
                                 .font(.system(size: 14, weight: .medium))
@@ -50,7 +55,11 @@ struct DecisionCardView: View {
                     .foregroundColor(.white)
                     .padding(.leading, 44).padding(.trailing, 24).padding(.top, 16)
                 Spacer()
-                floatGlow.padding(.horizontal, 52).frame(maxWidth: .infinity)
+                floatGlow
+                    .padding(.horizontal, 52)
+                    .frame(maxWidth: .infinity)
+                    .offset(y: cardOffset)
+                    .opacity(cardOpacity)
                 Spacer()
                 Text("RESULTS AFTER SIMULATING\nTHOUSANDS OF SCENARIOS")
                     .font(.system(size: 11, weight: .medium, design: .monospaced))
@@ -63,10 +72,31 @@ struct DecisionCardView: View {
         }
         .onAppear {
             layoutIndex = Int.random(in: 0...4)
-            withAnimation(.spring(response: 0.50, dampingFraction: 0.75)) { cardScale = 1.0 }
+            withAnimation(.spring(response: 1.0, dampingFraction: 0.85)) {
+                cardOffset  = 0
+                cardOpacity = 1
+                cardScale   = 1.0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            }
             startGyro()
         }
         .onDisappear { Self.motion.stopDeviceMotionUpdates() }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 30)
+                .onEnded { v in
+                    guard allowSwipeDismiss else { return }
+                    if v.translation.height > 100 && abs(v.translation.width) < 80 {
+                        dismissCard()
+                    }
+                }
+        )
+    }
+
+    // ── Dismiss ───────────────────────────────────────────────────────────────
+    private func dismissCard() {
+        onReset()
     }
 
     // ── Gyroscope ─────────────────────────────────────────────────────────────
@@ -120,7 +150,7 @@ struct DecisionCardView: View {
     // ── Card ──────────────────────────────────────────────────────────────────
     private var floatGlow: some View {
         ZStack {
-            CardBackView(result: result, originalQuestion: originalQuestion)
+            CardBackView(result: result, originalQuestion: originalQuestion, onNewThink: onReset)
                 .overlay(RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
                 .rotation3DEffect(.degrees(cardAngle + 180), axis: (0, 1, 0), perspective: 1.1)

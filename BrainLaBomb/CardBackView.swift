@@ -3,6 +3,7 @@ import SwiftUI
 struct CardBackView: View {
     let result: DecisionResult
     let originalQuestion: String
+    var onNewThink: (() -> Void)? = nil
     @State private var showStories = false
     @State private var showChat = false
     @State private var chatSessionID = UUID()
@@ -97,10 +98,23 @@ struct CardBackView: View {
                 .padding(.horizontal, 18)
                 .padding(.bottom, 20)
                 .fullScreenCover(isPresented: $showStories) {
-                    StoriesView(result: result)
+                    StoriesView(
+                        result: result,
+                        onContinueInChat: {
+                            showStories = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                chatSessionID = UUID()
+                                showChat = true
+                            }
+                        },
+                        onNewThink: {
+                            showStories = false
+                            onNewThink?()
+                        }
+                    )
                 }
                 .fullScreenCover(isPresented: $showChat) {
-                    ChatView(originalQuestion: originalQuestion, decisionResult: result)
+                    ChatView(originalQuestion: originalQuestion, decisionResult: result, onNewThink: onNewThink)
                         .id(chatSessionID)
                 }
             }

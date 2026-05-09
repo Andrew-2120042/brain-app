@@ -76,9 +76,12 @@ struct HomeView: View {
                         }
                     } label: {
                         Image(systemName: "clock.arrow.circlepath")
-                            .font(.system(size: 20))
+                            .font(.system(size: 22))
                             .foregroundColor(.white.opacity(0.7))
+                            .frame(width: 44, height: 44)
                     }
+
+                    Spacer()
 
                     Button {
                         useMockData.toggle()
@@ -92,9 +95,6 @@ struct HomeView: View {
                                     .clipShape(Capsule())
                             )
                     }
-                    .padding(.leading, 8)
-
-                    Spacer()
 
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) { homeVersion = (homeVersion + 1) % 2 }
@@ -106,8 +106,8 @@ struct HomeView: View {
                             .background(Color(white: 0.12).clipShape(Capsule()))
                     }
                 }
-                .padding(.top, 62)
-                .padding(.horizontal, 20)
+                .padding(.top, 0)
+                .padding(.horizontal, 16)
 
                 Spacer()
             }

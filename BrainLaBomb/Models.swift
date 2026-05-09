@@ -26,6 +26,13 @@ struct OutcomeRow: Codable, Identifiable {
     }
 }
 
+// MARK: - Decision Archetype
+struct DecisionArchetype: Codable {
+    let name: String
+    let description: String
+    let percentage: Int
+}
+
 // MARK: - Decision Report
 struct DecisionReport: Codable {
     // reasoning is [String] so StoriesView's .joined(separator:) call keeps working;
@@ -38,6 +45,8 @@ struct DecisionReport: Codable {
     let patternNote: String
     let needsAmbientQuestion: Bool
     let ambientQuestion: String
+    let whatYoureNotSaying: String
+    let whatUsuallyHelps: String
     // legacy display fields — not returned by the new API, filled with defaults
     let majorityLabel: String
     let topic: String
@@ -50,6 +59,7 @@ struct DecisionResult: Codable, Identifiable {
     let confidence: Int
     let simulationCount: Int
     let mode: DecisionMode
+    let archetype: DecisionArchetype
     let report: DecisionReport
 
     // Legacy computed accessors used by CardBackView / StoriesView
@@ -73,6 +83,10 @@ struct DecisionResult: Codable, Identifiable {
         let patternNote     = try c.decode(String.self,     forKey: .patternNote)
         let needsAmbQ       = try c.decode(Bool.self,       forKey: .needsAmbientQuestion)
         let ambQ            = try c.decode(String.self,     forKey: .ambientQuestion)
+        let whatYoureNotSaying = (try? c.decode(String.self, forKey: .whatYoureNotSaying)) ?? ""
+        let whatUsuallyHelps   = (try? c.decode(String.self, forKey: .whatUsuallyHelps))   ?? ""
+        archetype = (try? c.decode(DecisionArchetype.self, forKey: .archetype))
+            ?? DecisionArchetype(name: "The Thinker", description: "you came here for a reason.", percentage: 21)
 
         report = DecisionReport(
             reasoning:            [reasoningStr],
@@ -83,6 +97,8 @@ struct DecisionResult: Codable, Identifiable {
             patternNote:          patternNote,
             needsAmbientQuestion: needsAmbQ,
             ambientQuestion:      ambQ,
+            whatYoureNotSaying:   whatYoureNotSaying,
+            whatUsuallyHelps:     whatUsuallyHelps,
             majorityLabel:        "made that call",
             topic:                "decisions like this"
         )
@@ -102,6 +118,9 @@ struct DecisionResult: Codable, Identifiable {
         try c.encode(report.patternNote,            forKey: .patternNote)
         try c.encode(report.needsAmbientQuestion,   forKey: .needsAmbientQuestion)
         try c.encode(report.ambientQuestion,        forKey: .ambientQuestion)
+        try c.encode(report.whatYoureNotSaying,     forKey: .whatYoureNotSaying)
+        try c.encode(report.whatUsuallyHelps,       forKey: .whatUsuallyHelps)
+        try c.encode(archetype,                     forKey: .archetype)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -109,6 +128,8 @@ struct DecisionResult: Codable, Identifiable {
         case reasoning, whyPoints, tradeoffs
         case majorityOutcomes, minorityOutcomes
         case patternNote, needsAmbientQuestion, ambientQuestion
+        case whatYoureNotSaying, whatUsuallyHelps
+        case archetype
     }
 }
 
@@ -173,8 +194,15 @@ extension DecisionResult {
             {"percentage": 2, "title": "Adapted", "explanation": "Lifestyle adjusted but at significant personal cost"}
           ],
           "patternNote": "",
+          "whatYoureNotSaying": "You're not just missing her. You're missing the version of yourself that existed when she was around. That's harder to admit because it means this isn't just about her.",
+          "whatUsuallyHelps": "Most people in this spot need to stop performing okay before they can actually get there. Give yourself one honest conversation — with yourself first, not her.",
           "needsAmbientQuestion": false,
-          "ambientQuestion": ""
+          "ambientQuestion": "",
+          "archetype": {
+            "name": "The Overthinker",
+            "description": "you see every angle. landing is the hard part.",
+            "percentage": 24
+          }
         }
         """
         let data = json.data(using: .utf8)!

@@ -26,7 +26,7 @@ struct HistoryPanelView: View {
                 if thinks.isEmpty {
                     emptyState
                 } else {
-                    ScrollView {
+                    ScrollView(showsIndicators: false) {
                         VStack(spacing: 0) {
                             ForEach(thinks) { think in
                                 Button { selectedThink = think } label: {
@@ -113,7 +113,7 @@ struct HistoryPanelView: View {
                 .foregroundColor(.white)
                 .lineLimit(1)
 
-            HStack(alignment: .bottom) {
+            HStack(alignment: .center) {
                 Text(dateFormatter.string(from: think.timestamp))
                     .font(.custom("Poppins-Regular", size: 11))
                     .foregroundColor(Color(hex: "#666666"))

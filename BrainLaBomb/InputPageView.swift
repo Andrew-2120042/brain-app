@@ -2,10 +2,10 @@ import SwiftUI
 
 struct InputPageView: View {
     let onSubmit: (String) -> Void
+    let onDismiss: () -> Void
 
     @State private var text = ""
     @FocusState private var focused: Bool
-    @Environment(\.dismiss) private var dismiss
 
     private var canSubmit: Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -19,7 +19,7 @@ struct InputPageView: View {
 
                 // ── Header ───────────────────────────────────────────────────
                 HStack(alignment: .center) {
-                    Button { dismiss() } label: {
+                    Button { onDismiss() } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 17, weight: .medium))
                             .foregroundColor(Color(white: 0.45))

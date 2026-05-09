@@ -18,7 +18,7 @@ private func videoURL(_ name: String) -> URL {
 }
 
 // Per-layout video assignments
-private let videoA = videoURL("cosmos_833015861")
+private let videoA = Bundle.main.url(forResource: "card_a1", withExtension: "mov")!
 private let videoB = videoURL("cosmos_343223263")
 private let videoC = videoURL("cosmos_962608114")
 private let videoD = videoURL("cosmos_32819741")
@@ -53,9 +53,16 @@ struct CardLayoutA: View {
                         .lineLimit(2)
                         .minimumScaleFactor(0.7)
 
-                    Text("\(result.confidence)% confidence from simulation")
-                        .font(.label)
-                        .foregroundColor(labelGray)
+                    if result.confidence > 0 {
+                        Text("\(result.confidence)% confidence from simulation")
+                            .font(.label)
+                            .foregroundColor(labelGray)
+                    } else {
+                        Text("no simulation needed")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(Color(white: 0.4))
+                            .tracking(0.5)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                 .padding(.horizontal, 14)
@@ -90,16 +97,23 @@ struct CardLayoutB: View {
 
                     Spacer()
 
-                    Text("\(result.confidence)%")
-                        .font(.pct(90))
-                        .foregroundColor(pctGray)
-                        .minimumScaleFactor(0.5)
-                        .lineLimit(1)
+                    if result.confidence > 0 {
+                        Text("\(result.confidence)%")
+                            .font(.pct(90))
+                            .foregroundColor(pctGray)
+                            .minimumScaleFactor(0.5)
+                            .lineLimit(1)
 
-                    Text("confidence from simulation")
-                        .font(.label)
-                        .foregroundColor(labelGray)
-                        .padding(.top, 4)
+                        Text("confidence from simulation")
+                            .font(.label)
+                            .foregroundColor(labelGray)
+                            .padding(.top, 4)
+                    } else {
+                        Text("no simulation needed")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(Color(white: 0.4))
+                            .tracking(0.5)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .padding(.horizontal, 14)
@@ -135,15 +149,22 @@ struct CardLayoutC: View {
                     .padding(.top, 8)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("\(result.confidence)%")
-                        .font(.pct(80))
-                        .foregroundColor(pctGray)
-                        .minimumScaleFactor(0.5)
-                        .lineLimit(1)
+                    if result.confidence > 0 {
+                        Text("\(result.confidence)%")
+                            .font(.pct(80))
+                            .foregroundColor(pctGray)
+                            .minimumScaleFactor(0.5)
+                            .lineLimit(1)
 
-                    Text("confidence from simulation")
-                        .font(.label)
-                        .foregroundColor(labelGray)
+                        Text("confidence from simulation")
+                            .font(.label)
+                            .foregroundColor(labelGray)
+                    } else {
+                        Text("no simulation needed")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(Color(white: 0.4))
+                            .tracking(0.5)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                 .padding(.horizontal, 14)
@@ -172,16 +193,23 @@ struct CardLayoutD: View {
 
                     Spacer()
 
-                    Text("\(result.confidence)%")
-                        .font(.pct(82))
-                        .foregroundColor(pctGray)
-                        .minimumScaleFactor(0.5)
-                        .lineLimit(1)
+                    if result.confidence > 0 {
+                        Text("\(result.confidence)%")
+                            .font(.pct(82))
+                            .foregroundColor(pctGray)
+                            .minimumScaleFactor(0.5)
+                            .lineLimit(1)
 
-                    Text("confidence from simulation")
-                        .font(.label)
-                        .foregroundColor(labelGray)
-                        .padding(.top, 4)
+                        Text("confidence from simulation")
+                            .font(.label)
+                            .foregroundColor(labelGray)
+                            .padding(.top, 4)
+                    } else {
+                        Text("no simulation needed")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(Color(white: 0.4))
+                            .tracking(0.5)
+                    }
                 }
                 .padding(14)
                 .frame(width: geo.size.width * 0.55)
@@ -225,16 +253,23 @@ struct CardLayoutE: View {
 
                     Spacer()
 
-                    Text("\(result.confidence)%")
-                        .font(.pct(86))
-                        .foregroundColor(pctGray)
-                        .minimumScaleFactor(0.5)
-                        .lineLimit(1)
+                    if result.confidence > 0 {
+                        Text("\(result.confidence)%")
+                            .font(.pct(86))
+                            .foregroundColor(pctGray)
+                            .minimumScaleFactor(0.5)
+                            .lineLimit(1)
 
-                    Text("confidence from simulation")
-                        .font(.label)
-                        .foregroundColor(labelGray)
-                        .padding(.top, 4)
+                        Text("confidence from simulation")
+                            .font(.label)
+                            .foregroundColor(labelGray)
+                            .padding(.top, 4)
+                    } else {
+                        Text("no simulation needed")
+                            .font(.system(size: 13, weight: .regular))
+                            .foregroundColor(Color(white: 0.4))
+                            .tracking(0.5)
+                    }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
                 .padding(.horizontal, 14)

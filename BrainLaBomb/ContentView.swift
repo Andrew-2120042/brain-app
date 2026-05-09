@@ -9,9 +9,12 @@ struct ContentView: View {
 
             switch viewModel.appState {
             case .result(let r):
-                DecisionCardView(result: r, originalQuestion: viewModel.originalQuestion) {
-                    withAnimation(.easeInOut(duration: 0.35)) { viewModel.reset() }
-                }
+                DecisionCardView(
+                    result: r,
+                    originalQuestion: viewModel.originalQuestion,
+                    onReset: { withAnimation(.easeInOut(duration: 0.35)) { viewModel.reset() } },
+                    allowSwipeDismiss: false
+                )
                 .transition(.opacity)
 
             case .question(let q):
@@ -27,11 +30,18 @@ struct ContentView: View {
                     .transition(.opacity)
 
             case .input:
-                InputPageView { question in
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        viewModel.submitQuestion(question)
+                InputPageView(
+                    onSubmit: { question in
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            viewModel.submitQuestion(question)
+                        }
+                    },
+                    onDismiss: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            viewModel.reset()
+                        }
                     }
-                }
+                )
                 .transition(.opacity)
 
             case .error(let msg):
