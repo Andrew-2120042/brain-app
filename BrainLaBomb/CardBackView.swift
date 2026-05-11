@@ -3,14 +3,60 @@ import SwiftUI
 struct CardBackView: View {
     let result: DecisionResult
     let originalQuestion: String
+    let thinkID: UUID
+    @ObservedObject var viewModel: AppViewModel
+    let onChatMessagesUpdated: ([ChatBubble]) -> Void
     var onNewThink: (() -> Void)? = nil
+
     @State private var showStories = false
     @State private var showChat = false
-    @State private var chatSessionID = UUID()
+    @State private var showPaywall = false
+    @State private var chatMessages: [ChatBubble]
+    #if DEBUG
+    @State private var debugForceVerdict = false
+    #endif
+
+    var isPro: Bool { false } // TODO: replace with RevenueCat check
+
+    init(result: DecisionResult,
+         originalQuestion: String,
+         viewModel: AppViewModel,
+         thinkID: UUID,
+         existingChatMessages: [ChatBubble],
+         onChatMessagesUpdated: @escaping ([ChatBubble]) -> Void,
+         onNewThink: (() -> Void)? = nil) {
+        self.result = result
+        self.originalQuestion = originalQuestion
+        self._viewModel = ObservedObject(initialValue: viewModel)
+        self.thinkID = thinkID
+        self.onChatMessagesUpdated = onChatMessagesUpdated
+        self.onNewThink = onNewThink
+        self._chatMessages = State(initialValue: existingChatMessages)
+    }
+
+    private var verdictIsTruncated: Bool {
+        #if DEBUG
+        return result.verdict.split(separator: " ").count > 7 || debugForceVerdict
+        #else
+        return result.verdict.split(separator: " ").count > 7
+        #endif
+    }
 
     var body: some View {
         GeometryReader { geo in
             VStack(alignment: .leading, spacing: 0) {
+
+                // ── Full verdict (only when front text is cut off) ────
+                if verdictIsTruncated {
+                    Text(result.verdict.lowercased())
+                        .font(.custom("Poppins-Regular", size: 18))
+                        .foregroundColor(.white)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 18)
+                        .padding(.bottom, 14)
+                }
 
                 // ── Why ──────────────────────────────────────────────
                 VStack(alignment: .leading, spacing: 10) {
@@ -33,7 +79,7 @@ struct CardBackView: View {
                     }
                 }
                 .padding(.horizontal, 18)
-                .padding(.top, 22)
+                .padding(.top, verdictIsTruncated ? 0 : 22)
 
                 Spacer().frame(height: 28)
 
@@ -63,12 +109,28 @@ struct CardBackView: View {
 
                 // ── Buttons ───────────────────────────────────────────
                 VStack(spacing: 8) {
-                    Button { chatSessionID = UUID(); showChat = true } label: {
+                    #if DEBUG
+                    Button { debugForceVerdict.toggle() } label: {
+                        Text("VERB")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(debugForceVerdict ? Color.black : Color(white: 0.55))
+                            .frame(width: 50, height: 28)
+                            .background(debugForceVerdict ? Color.white : Color(white: 0.14))
+                            .clipShape(Capsule())
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    #endif
+                    Button { if isPro { showChat = true } else { showPaywall = true } } label: {
                         HStack {
                             Text("chat about this")
                                 .font(.custom("Poppins-Regular", size: 15))
                                 .foregroundColor(.white)
                             Spacer()
+                            if !isPro {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 13))
+                                    .foregroundColor(Color(white: 0.45))
+                            }
                         }
                         .padding(.horizontal, 22)
                         .padding(.vertical, 16)
@@ -100,10 +162,10 @@ struct CardBackView: View {
                 .fullScreenCover(isPresented: $showStories) {
                     StoriesView(
                         result: result,
+                        viewModel: viewModel,
                         onContinueInChat: {
                             showStories = false
                             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                chatSessionID = UUID()
                                 showChat = true
                             }
                         },
@@ -113,9 +175,22 @@ struct CardBackView: View {
                         }
                     )
                 }
+                .sheet(isPresented: $showPaywall) {
+                    PaywallView()
+                }
                 .fullScreenCover(isPresented: $showChat) {
-                    ChatView(originalQuestion: originalQuestion, decisionResult: result, onNewThink: onNewThink)
-                        .id(chatSessionID)
+                    ChatView(
+                        originalQuestion: originalQuestion,
+                        decisionResult: result,
+                        viewModel: viewModel,
+                        thinkID: thinkID,
+                        existingMessages: chatMessages,
+                        onMessagesUpdated: { updated in
+                            chatMessages = updated
+                            onChatMessagesUpdated(updated)
+                        },
+                        onNewThink: onNewThink
+                    )
                 }
             }
         }

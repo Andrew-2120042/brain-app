@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = AppViewModel()
+    @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
 
     var body: some View {
         ZStack {
@@ -13,7 +14,15 @@ struct ContentView: View {
                     result: r,
                     originalQuestion: viewModel.originalQuestion,
                     onReset: { withAnimation(.easeInOut(duration: 0.35)) { viewModel.reset() } },
-                    allowSwipeDismiss: false
+                    allowSwipeDismiss: false,
+                    viewModel: viewModel,
+                    thinkID: viewModel.currentThinkID ?? UUID(),
+                    existingChatMessages: viewModel.currentThinkID.flatMap { viewModel.think(withID: $0)?.chatMessages } ?? [],
+                    onChatMessagesUpdated: { messages in
+                        if let id = viewModel.currentThinkID {
+                            viewModel.updateChatMessages(messages, forThinkID: id)
+                        }
+                    }
                 )
                 .transition(.opacity)
 
@@ -53,7 +62,13 @@ struct ContentView: View {
                 .transition(.opacity)
 
             case .home:
-                HomeView(isProcessing: false) {
+                HomeView(
+                    isProcessing: false,
+                    viewModel: viewModel,
+                    onChatMessagesUpdated: { id, messages in
+                        viewModel.updateChatMessages(messages, forThinkID: id)
+                    }
+                ) {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         viewModel.appState = .input
                     }
@@ -62,6 +77,12 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.35), value: screenKey)
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingView {
+                UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+                showOnboarding = false
+            }
+        }
     }
 
     private var screenKey: Int {

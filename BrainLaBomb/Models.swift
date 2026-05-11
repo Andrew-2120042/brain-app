@@ -133,6 +133,20 @@ struct DecisionResult: Codable, Identifiable {
     }
 }
 
+// MARK: - Pattern Identity
+struct PatternIdentity: Codable {
+    let name: String
+    let description: String
+    let percentage: Int
+    let insight: String
+}
+
+struct PatternData: Codable {
+    let identity: PatternIdentity
+    let generatedAt: Date
+    let thinkCount: Int
+}
+
 // MARK: - Think (History)
 struct Think: Codable, Identifiable {
     let id: UUID
@@ -141,6 +155,7 @@ struct Think: Codable, Identifiable {
     let followUpQuestion: String
     let followUpAnswer: String
     let result: DecisionResult
+    var chatMessages: [ChatBubble]
 
     init(originalQuestion: String, followUpQuestion: String = "", followUpAnswer: String = "", result: DecisionResult) {
         self.id = UUID()
@@ -149,6 +164,7 @@ struct Think: Codable, Identifiable {
         self.followUpQuestion = followUpQuestion
         self.followUpAnswer = followUpAnswer
         self.result = result
+        self.chatMessages = []
     }
 }
 

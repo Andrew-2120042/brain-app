@@ -1,11 +1,15 @@
 import SwiftUI
+import UserNotifications
 
 struct HomeView: View {
     let isProcessing: Bool
+    @ObservedObject var viewModel: AppViewModel
+    let onChatMessagesUpdated: (UUID, [ChatBubble]) -> Void
     let onTap: () -> Void
 
     @State private var homeVersion: Int = 0
     @State private var showHistory = false
+    @State private var showSettings = false
     @State private var historyDragOffset: CGFloat = 0
     @AppStorage("debug_useMockData") private var useMockData: Bool = true
 
@@ -46,13 +50,20 @@ struct HomeView: View {
         ZStack(alignment: .leading) {
             homeScreen
 
-            HistoryPanelView(isPresented: $showHistory)
+            HistoryPanelView(
+                isPresented: $showHistory,
+                viewModel: viewModel,
+                onChatMessagesUpdated: onChatMessagesUpdated
+            )
                 .offset(x: historyXOffset)
                 .ignoresSafeArea()
                 .gesture(historyDragGesture)
                 .allowsHitTesting(showHistory)
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: showHistory)
+        .sheet(isPresented: $showSettings) {
+            SettingsView(viewModel: viewModel)
+        }
     }
 
     // MARK: - Home Screen
@@ -83,6 +94,13 @@ struct HomeView: View {
 
                     Spacer()
 
+                    Button { showSettings = true } label: {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white.opacity(0.7))
+                            .frame(width: 44, height: 44)
+                    }
+
                     Button {
                         useMockData.toggle()
                     } label: {
@@ -105,6 +123,24 @@ struct HomeView: View {
                             .padding(.horizontal, 10).padding(.vertical, 5)
                             .background(Color(white: 0.12).clipShape(Capsule()))
                     }
+
+                    #if DEBUG
+Button {
+                        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                            DispatchQueue.main.async {
+                                if granted {
+                                    NotificationManager.shared.scheduleTestNotification()
+                                }
+                            }
+                        }
+                    } label: {
+                        Text("notif")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(Color(white: 0.35))
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(Color(white: 0.12).clipShape(Capsule()))
+                    }
+                    #endif
                 }
                 .padding(.top, 0)
                 .padding(.horizontal, 16)

@@ -212,7 +212,7 @@ enum Constants {
       "confidence": 87,
       "simulationCount": 1247,
       "mode": "DECISION",
-      "reasoning": "3-5 sentences. mentor voice. second person. five layers blended into one flowing thought. no bullets. no sections. just thinking. the last sentence lands hardest. Never wrap in quotation marks. No quotes around the reasoning text. Just speak directly. No punctuation wrapping it.",
+      "reasoning": "NEVER wrap this in quotation marks. No opening quote character. No closing quote character. The first character of your response for this field must be a letter, never a symbol. 3-5 sentences. mentor voice. second person. five layers blended into one flowing thought. no bullets. no sections. just thinking. the last sentence lands hardest. Never wrap in quotation marks. No quotes around the reasoning text. Just speak directly. No punctuation wrapping it.",
       "whyPoints": [
         "short phrase no period",
         "short phrase no period",
@@ -290,5 +290,53 @@ enum Constants {
     If it hedges — rewrite it.
     If it lectures — rewrite it.
     If the last sentence doesn't land — rewrite it.
+    """
+
+    // MARK: - Pattern Analysis
+    static let patternAnalysisPrompt = """
+    You have been given a history of someone's thinks — the situations they brought, the verdicts given, and their archetypes across multiple sessions. Your job is to find who this person is as a thinker based on their accumulated history.
+
+    You are looking for their pattern identity — a title and description that captures how they consistently move through decisions over time. This is different from a single archetype. This is earned through repeated behavior.
+
+    Pattern identity names must feel like a reveal. Something that makes someone stop and think "damn, that's me." They should be 2-3 words. Human. Specific. Not generic personality test language.
+
+    Good examples:
+    The Family Man — thinks with his people in mind first, always
+    The Night Thinker — biggest decisions happen after the world goes quiet
+    The Security Seeker — every fork in the road, takes the safer path
+    The Romantic — half their thinks involve someone else
+    The Staller — knows the answer before asking, asks anyway
+    The Builder — every decision connects to something being created
+    The Escapist — thinks about leaving more than arriving
+    The Protector — makes decisions for other people even when it's their question
+    The Grinder — chooses hard over easy every time
+    The Doubter — trusts external input more than internal knowing
+
+    Rules:
+    - Read the actual think history carefully. Find the real pattern not a guess.
+    - The name must be earned by the data not assigned generically.
+    - description: one line, lowercase, no period, second person, specific
+    - insight: one sentence that goes one layer deeper. what this pattern reveals about how they actually move through life. this is the line they will screenshot.
+    - percentage: believable. Never below 12, never above 29. Odd numbers feel more real.
+    - If there is genuinely no clear pattern yet — return needsMoreData: true and nothing else.
+    - Never assign a pattern identity with fewer than 5 thinks in the history.
+
+    Respond ONLY with valid JSON. No markdown. No text outside the JSON.
+
+    {
+      "needsMoreData": false,
+      "patternIdentity": {
+        "name": "The Family Man",
+        "description": "thinks with his people in mind first, always",
+        "percentage": 17,
+        "insight": "your decisions aren't really about you. they never were."
+      }
+    }
+
+    If needs more data:
+    {
+      "needsMoreData": true,
+      "patternIdentity": null
+    }
     """
 }

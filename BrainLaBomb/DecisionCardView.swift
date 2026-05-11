@@ -4,10 +4,14 @@ import CoreMotion
 private let layoutLabels = ["A", "B", "C", "D", "E"]
 
 struct DecisionCardView: View {
-    let result:             DecisionResult
-    let originalQuestion:   String
-    let onReset:            () -> Void
-    var allowSwipeDismiss:  Bool = true
+    let result:                  DecisionResult
+    let originalQuestion:        String
+    let onReset:                 () -> Void
+    var allowSwipeDismiss:       Bool = true
+    @ObservedObject var viewModel: AppViewModel
+    let thinkID:                 UUID
+    let existingChatMessages:    [ChatBubble]
+    let onChatMessagesUpdated:   ([ChatBubble]) -> Void
 
     @State private var layoutIndex: Int     = 0
     @State private var cardScale: CGFloat   = 0.92
@@ -132,10 +136,12 @@ struct DecisionCardView: View {
                 dragStarted = false
                 if wasDrag {
                     let velocity = Double(v.predictedEndTranslation.width - v.translation.width)
-                    let snapped = (cardAngle / 180).rounded() * 180
-                    let target  = abs(velocity) > 300
+                    let snapped  = (cardAngle / 180).rounded() * 180
+                    let raw      = abs(velocity) > 300
                         ? (velocity > 0 ? snapped + 180 : snapped - 180)
                         : snapped
+                    // Clamp to exactly one flip from where the drag started
+                    let target = dragBase + max(-180.0, min(180.0, raw - dragBase))
                     withAnimation(.spring(response: 0.38, dampingFraction: 0.68)) {
                         cardAngle = target
                         tiltX = 0
@@ -150,7 +156,15 @@ struct DecisionCardView: View {
     // ── Card ──────────────────────────────────────────────────────────────────
     private var floatGlow: some View {
         ZStack {
-            CardBackView(result: result, originalQuestion: originalQuestion, onNewThink: onReset)
+            CardBackView(
+                result: result,
+                originalQuestion: originalQuestion,
+                viewModel: viewModel,
+                thinkID: thinkID,
+                existingChatMessages: existingChatMessages,
+                onChatMessagesUpdated: onChatMessagesUpdated,
+                onNewThink: onReset
+            )
                 .overlay(RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
                 .rotation3DEffect(.degrees(cardAngle + 180), axis: (0, 1, 0), perspective: 1.1)

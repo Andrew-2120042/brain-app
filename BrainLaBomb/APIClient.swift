@@ -98,6 +98,52 @@ struct APIClient {
         }
     }
 
+    // MARK: - Call 3: Pattern Analysis
+    func analyzePattern(thinkHistory: [Think]) async throws -> PatternData? {
+        guard thinkHistory.count >= 5 else { return nil }
+
+        let historyContext = thinkHistory.map { think in
+            """
+            Situation: \(think.originalQuestion)
+            Verdict: \(think.result.verdict)
+            Confidence: \(think.result.confidence)%
+            Archetype: \(think.result.archetype.name)
+            Archetype description: \(think.result.archetype.description)
+            Mode: \(think.result.mode.rawValue)
+            """
+        }.joined(separator: "\n---\n")
+
+        let userMessage = """
+        Here is this person's think history (\(thinkHistory.count) thinks total):
+
+        \(historyContext)
+
+        Analyze their pattern identity based on this history.
+        """
+
+        let body: [String: Any] = [
+            "model": Constants.model,
+            "max_tokens": 400,
+            "system": Constants.patternAnalysisPrompt,
+            "messages": [["role": "user", "content": userMessage]]
+        ]
+
+        let responseText = try await makeRequest(body: body)
+        let cleanedResponse = cleanJSON(responseText)
+
+        guard let data = cleanedResponse.data(using: .utf8) else { return nil }
+
+        struct PatternResponse: Codable {
+            let needsMoreData: Bool
+            let patternIdentity: PatternIdentity?
+        }
+
+        let response = try JSONDecoder().decode(PatternResponse.self, from: data)
+        guard !response.needsMoreData, let identity = response.patternIdentity else { return nil }
+
+        return PatternData(identity: identity, generatedAt: Date(), thinkCount: thinkHistory.count)
+    }
+
     // MARK: - Core Request
     private func makeRequest(body: [String: Any]) async throws -> String {
         guard let url = URL(string: Constants.baseURL) else {

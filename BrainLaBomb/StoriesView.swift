@@ -2,6 +2,7 @@ import SwiftUI
 
 struct StoriesView: View {
     let result: DecisionResult
+    @ObservedObject var viewModel: AppViewModel
     var onContinueInChat: () -> Void = {}
     var onNewThink: () -> Void = {}
 
@@ -16,10 +17,20 @@ struct StoriesView: View {
     @State private var showTooltip = false
     @State private var reasoningDebug = false
     @State private var debugModeOverride: DecisionMode? = nil
+    @State private var showPaywall = false
+    @State private var debugIsPro = false
+    @State private var debugForcePattern = false
 
     private var activeMode: DecisionMode { debugModeOverride ?? result.mode }
+    var isPro: Bool {
+        #if DEBUG
+        return debugIsPro
+        #else
+        return false // TODO: replace with RevenueCat check
+        #endif
+    }
 
-    private let totalCards = 4
+    private let totalCards = 5
     private let storyDuration: TimeInterval = 7.0
 
     private var tooltipText: String {
@@ -38,15 +49,14 @@ struct StoriesView: View {
                 case 0: card1
                 case 1: card2
                 case 2: card3
-                default: card4
+                case 3:
+                    if isPro { archetypeCard } else { blurredArchetypeCard }
+                default: patternCard
                 }
             }
             .id(currentIndex)
-            .transition(.asymmetric(
-                insertion: .move(edge: .trailing).combined(with: .opacity),
-                removal:   .move(edge: .leading ).combined(with: .opacity)
-            ))
-            .animation(.easeInOut(duration: 0.25), value: currentIndex)
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.2), value: currentIndex)
 
             // ── Tap zones with pause / navigate ──────────────────────────────
             HStack(spacing: 0) {
@@ -56,6 +66,38 @@ struct StoriesView: View {
                 tapZone(onShortTap: {
                     if showTooltip { showTooltip = false } else { goForward() }
                 })
+            }
+
+            // ── Lock overlay for blurred cards (above tap zones, below Chrome) ──
+            if (currentIndex == 3 && !isPro) || (currentIndex == 4 && !isPro) {
+                VStack {
+                    Spacer()
+                    VStack(spacing: 16) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 22))
+                            .foregroundColor(Color(white: 0.45))
+                        Text(currentIndex == 3
+                            ? "unlock to see what\nthis means about you"
+                            : "unlock to reveal\nyour pattern identity")
+                            .font(.custom("HelveticaNeue", size: 15))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                        Button { showPaywall = true } label: {
+                            Text("unlock pro →")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.black)
+                                .padding(.horizontal, 28)
+                                .padding(.vertical, 12)
+                                .background(Color.white)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                    Spacer()
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity)
             }
 
             // ── Chrome (sits above tap zones so buttons work) ─────────────────
@@ -105,17 +147,23 @@ struct StoriesView: View {
                 if currentIndex == totalCards - 1 {
                     // ── Last card buttons ─────────────────────────────────────
                     VStack(spacing: 12) {
-                        Button { onContinueInChat() } label: {
-                            Text("continue in chat")
-                                .font(.custom("HelveticaNeue", size: 16))
-                                .foregroundColor(.white)
+                        if isPro {
+                            Button { onContinueInChat() } label: {
+                                HStack {
+                                    Text("continue in chat")
+                                        .font(.custom("HelveticaNeue", size: 16))
+                                        .foregroundColor(.white)
+                                    Spacer()
+                                }
                                 .frame(maxWidth: .infinity)
+                                .padding(.horizontal, 22)
                                 .padding(.vertical, 16)
                                 .background(Color.black)
                                 .clipShape(RoundedRectangle(cornerRadius: 14))
                                 .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.white, lineWidth: 1))
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                        .buttonStyle(PlainButtonStyle())
 
                         Button { onNewThink() } label: {
                             Text("new think")
@@ -154,6 +202,38 @@ struct StoriesView: View {
                                     .background(reasoningDebug ? Color(white: 0.28) : Color(white: 0.14))
                                     .clipShape(Circle())
                             }
+                        }
+                        // PRO unlock debug
+                        Button {
+                            debugIsPro.toggle()
+                            #if DEBUG
+                            if debugIsPro && viewModel.patternData == nil {
+                                viewModel.injectMockPatternData()
+                            }
+                            #endif
+                        } label: {
+                            Text("PRO")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(debugIsPro ? Color.black : Color(white: 0.55))
+                                .frame(width: 38, height: 28)
+                                .background(debugIsPro ? Color.white : Color(white: 0.14))
+                                .clipShape(Capsule())
+                        }
+                        // Pattern debug: force pattern card to show full data
+                        Button {
+                            debugForcePattern.toggle()
+                            #if DEBUG
+                            if debugForcePattern && viewModel.patternData == nil {
+                                viewModel.injectMockPatternData()
+                            }
+                            #endif
+                        } label: {
+                            Text("PAT")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(debugForcePattern ? Color.black : Color(white: 0.55))
+                                .frame(width: 38, height: 28)
+                                .background(debugForcePattern ? Color.white : Color(white: 0.14))
+                                .clipShape(Capsule())
                         }
                         // Mode override buttons
                         ForEach([DecisionMode.decision, .direction, .emotional], id: \.self) { mode in
@@ -200,6 +280,7 @@ struct StoriesView: View {
         )
         .onAppear { startProgress() }
         .onDisappear { stopTimer() }
+        .sheet(isPresented: $showPaywall) { PaywallView() }
     }
 
     // ── Tap zone helper ───────────────────────────────────────────────────────
@@ -226,7 +307,8 @@ struct StoriesView: View {
     // MARK: – Card 1: Reasoning ───────────────────────────────────────────────
 
     private var card1: some View {
-        let para = "\u{201C}" + result.report.reasoning.joined(separator: " ") + "\u{201D}"
+        let quotes = CharacterSet(charactersIn: "\"\u{201C}\u{201D}\u{2018}\u{2019}'")
+        let para = result.report.reasoning.joined(separator: " ").trimmingCharacters(in: quotes)
         return Group {
             if reasoningDebug {
                 VStack {
@@ -456,7 +538,9 @@ struct StoriesView: View {
 
     // MARK: – Card 4: Archetype ───────────────────────────────────────────────
 
-    private var card4: some View {
+    // MARK: – Card 4: Archetype ───────────────────────────────────────────────
+
+    private var archetypeCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             cardHeading("archetype")
                 .padding(.top, 72)
@@ -512,6 +596,163 @@ struct StoriesView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    private var blurredArchetypeCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cardHeading("archetype")
+                .padding(.top, 72)
+                .padding(.bottom, 24)
+
+            Text(result.archetype.name)
+                .font(.custom("HelveticaNeue", size: 38))
+                .foregroundColor(.white)
+                .padding(.bottom, 12)
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text(result.archetype.description)
+                    .font(.custom("HelveticaNeue", size: 17))
+                    .foregroundColor(Color(white: 0.5))
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Rectangle()
+                    .fill(Color(white: 0.12))
+                    .frame(height: 1)
+                    .padding(.vertical, 8)
+
+                HStack(alignment: .bottom, spacing: 6) {
+                    Text("\(result.archetype.percentage)%")
+                        .font(.custom("HelveticaNeue", size: 32))
+                        .foregroundColor(.white)
+                    Text("of thinkers\nshare this archetype")
+                        .font(.custom("HelveticaNeue", size: 12))
+                        .foregroundColor(Color(white: 0.3))
+                        .lineSpacing(3)
+                }
+            }
+            .blur(radius: 8)
+            .allowsHitTesting(false)
+
+            Spacer()
+        }
+        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    // MARK: – Card 5: Pattern ─────────────────────────────────────────────────
+
+    private var patternCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cardHeading("pattern")
+                .padding(.top, 72)
+                .padding(.bottom, 24)
+
+            Group {
+                if !debugForcePattern && viewModel.thinkCountForPattern < 5 {
+                    earlyPatternView
+                } else if let pattern = viewModel.patternData {
+                    fullPatternView(pattern: pattern)
+                } else {
+                    earlyPatternView
+                }
+            }
+            .blur(radius: isPro ? 0 : 8)
+            .allowsHitTesting(isPro)
+
+            Spacer()
+        }
+        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    private var earlyPatternView: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(contextualPatternObservation)
+                .font(.custom("HelveticaNeue", size: 28))
+                .foregroundColor(.white)
+                .lineSpacing(6)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text("your brain is starting\nto map how you think.")
+                .font(.custom("HelveticaNeue", size: 16))
+                .foregroundColor(Color(white: 0.4))
+                .lineSpacing(4)
+
+            Spacer().frame(height: 16)
+
+            HStack(spacing: 8) {
+                ForEach(0..<5, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(index < viewModel.thinkCountForPattern ? Color.white : Color(white: 0.15))
+                        .frame(width: 32, height: 3)
+                }
+            }
+
+            Text("\(max(0, 5 - viewModel.thinkCountForPattern)) more thinks until your pattern emerges.")
+                .font(.custom("HelveticaNeue", size: 12))
+                .foregroundColor(Color(white: 0.25))
+                .padding(.top, 8)
+        }
+    }
+
+    private var contextualPatternObservation: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        let isNight   = hour >= 21 || hour <= 4
+        let isEvening = hour >= 18 && hour < 21
+        switch activeMode {
+        case .decision:
+            return isNight ? "you make decisions\nat night." : isEvening ? "you think when\nthe day winds down." : "you came here\nfor an answer."
+        case .direction:
+            return isNight ? "you plan your future\nafter midnight." : "you're building\nsomething."
+        case .emotional:
+            return isNight ? "you process\nin the dark." : "you sit with things\nbefore you speak."
+        }
+    }
+
+    private func fullPatternView(pattern: PatternData) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(pattern.identity.name)
+                .font(.custom("HelveticaNeue", size: 38))
+                .foregroundColor(.white)
+                .lineSpacing(4)
+                .padding(.bottom, 12)
+
+            Text(pattern.identity.description)
+                .font(.custom("HelveticaNeue", size: 17))
+                .foregroundColor(Color(white: 0.5))
+                .lineSpacing(4)
+                .padding(.bottom, 28)
+
+            Rectangle()
+                .fill(Color(white: 0.12))
+                .frame(height: 1)
+                .padding(.bottom, 24)
+
+            HStack(alignment: .bottom, spacing: 6) {
+                Text("\(pattern.identity.percentage)%")
+                    .font(.custom("HelveticaNeue", size: 32))
+                    .foregroundColor(.white)
+                Text("of thinkers\nshare this")
+                    .font(.custom("HelveticaNeue", size: 12))
+                    .foregroundColor(Color(white: 0.3))
+                    .lineSpacing(3)
+                    .padding(.bottom, 3)
+            }
+            .padding(.bottom, 24)
+
+            Text(pattern.identity.insight)
+                .font(.custom("HelveticaNeue", size: 14))
+                .foregroundColor(Color(white: 0.35))
+                .lineSpacing(5)
+                .italic()
+        }
+    }
+
+    private func blurredPatternView(pattern: PatternData) -> some View {
+        fullPatternView(pattern: pattern)
+            .blur(radius: 8)
+            .allowsHitTesting(false)
     }
 
     // MARK: – Shared components ───────────────────────────────────────────────

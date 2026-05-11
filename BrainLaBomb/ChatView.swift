@@ -3,11 +3,18 @@ import CoreMotion
 
 // MARK: - Chat Bubble Model
 
-struct ChatBubble: Identifiable {
-    let id = UUID()
+struct ChatBubble: Identifiable, Codable {
+    let id: UUID
     let content: String
     let isUser: Bool
     let isContextCard: Bool
+
+    init(content: String, isUser: Bool, isContextCard: Bool) {
+        self.id = UUID()
+        self.content = content
+        self.isUser = isUser
+        self.isContextCard = isContextCard
+    }
 }
 
 // MARK: - Hex Color Extension
@@ -60,6 +67,10 @@ private extension View {
 struct ChatView: View {
     let originalQuestion: String
     let decisionResult: DecisionResult
+    @ObservedObject var viewModel: AppViewModel
+    let thinkID: UUID
+    let existingMessages: [ChatBubble]
+    let onMessagesUpdated: ([ChatBubble]) -> Void
     var onNewThink: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
@@ -68,7 +79,6 @@ struct ChatView: View {
     @State private var isLoading: Bool = false
     @State private var showStories: Bool = false
     @FocusState private var inputFocused: Bool
-    @State private var didAddContextCard = false
 
     // Gyro
     @State private var tiltX: Double = 0
@@ -122,9 +132,12 @@ struct ChatView: View {
             }
         }
         .onAppear {
-            if !didAddContextCard {
-                didAddContextCard = true
-                messages.append(ChatBubble(content: "", isUser: false, isContextCard: true))
+            if messages.isEmpty {
+                if existingMessages.isEmpty {
+                    messages.append(ChatBubble(content: "", isUser: false, isContextCard: true))
+                } else {
+                    messages = existingMessages
+                }
             }
             startGyro()
         }
@@ -134,6 +147,7 @@ struct ChatView: View {
         .fullScreenCover(isPresented: $showStories) {
             StoriesView(
                 result: decisionResult,
+                viewModel: viewModel,
                 onContinueInChat: { showStories = false },
                 onNewThink: {
                     showStories = false
@@ -294,12 +308,13 @@ struct ChatView: View {
     private var inputBar: some View {
         let canSend = !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isLoading
 
-        return HStack(spacing: 10) {
-            TextField("ask something about this...", text: $inputText)
+        return HStack(alignment: .center, spacing: 10) {
+            TextField("ask something about this...", text: $inputText, axis: .vertical)
                 .font(.system(size: 15))
                 .foregroundColor(.white)
                 .tint(.white)
                 .focused($inputFocused)
+                .lineLimit(1...5)
                 .onSubmit { sendMessage() }
 
             Button(action: sendMessage) {
@@ -317,9 +332,9 @@ struct ChatView: View {
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(
-            Capsule()
+            RoundedRectangle(cornerRadius: 22)
                 .fill(Color(hex: "#1C1C1E"))
-                .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 0.5))
+                .overlay(RoundedRectangle(cornerRadius: 22).stroke(Color.white.opacity(0.12), lineWidth: 0.5))
         )
         .padding(.horizontal, 16)
         .padding(.bottom, 10)
@@ -334,6 +349,7 @@ struct ChatView: View {
 
         inputText = ""
         messages.append(ChatBubble(content: text, isUser: true, isContextCard: false))
+        onMessagesUpdated(messages)
         isLoading = true
 
         Task {
@@ -342,6 +358,7 @@ struct ChatView: View {
                 await MainActor.run {
                     isLoading = false
                     messages.append(ChatBubble(content: reply, isUser: false, isContextCard: false))
+                    onMessagesUpdated(messages)
                 }
             } catch {
                 await MainActor.run {

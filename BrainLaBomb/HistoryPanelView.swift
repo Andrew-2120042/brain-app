@@ -2,6 +2,8 @@ import SwiftUI
 
 struct HistoryPanelView: View {
     @Binding var isPresented: Bool
+    @ObservedObject var viewModel: AppViewModel
+    let onChatMessagesUpdated: (UUID, [ChatBubble]) -> Void
 
     @AppStorage("debug_useMockData") private var useMockData: Bool = true
     @State private var thinks: [Think] = []
@@ -29,7 +31,9 @@ struct HistoryPanelView: View {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 0) {
                             ForEach(thinks) { think in
-                                Button { selectedThink = think } label: {
+                                Button {
+                                    selectedThink = thinks.first(where: { $0.id == think.id }) ?? think
+                                } label: {
                                     thinkRow(think)
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -50,7 +54,16 @@ struct HistoryPanelView: View {
             DecisionCardView(
                 result: think.result,
                 originalQuestion: think.originalQuestion,
-                onReset: { selectedThink = nil }
+                onReset: { selectedThink = nil },
+                viewModel: viewModel,
+                thinkID: think.id,
+                existingChatMessages: think.chatMessages,
+                onChatMessagesUpdated: { updatedMessages in
+                    if let idx = thinks.firstIndex(where: { $0.id == think.id }) {
+                        thinks[idx].chatMessages = updatedMessages
+                    }
+                    onChatMessagesUpdated(think.id, updatedMessages)
+                }
             )
         }
     }
@@ -133,6 +146,12 @@ struct HistoryPanelView: View {
                     Text("confidence")
                         .font(.custom("Poppins-Regular", size: 10))
                         .foregroundColor(Color(hex: "#444444"))
+                    if !think.chatMessages.filter({ !$0.isContextCard }).isEmpty {
+                        Text("chat saved")
+                            .font(.system(size: 10, weight: .regular))
+                            .foregroundColor(Color(white: 0.35))
+                            .padding(.top, 2)
+                    }
                 }
             }
         }

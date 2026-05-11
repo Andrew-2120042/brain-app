@@ -41,22 +41,32 @@ struct CardLayoutA: View {
             VStack(spacing: 0) {
                 // Big video with gaps on all sides so it sits centred inside the card
                 VideoBlock(url: videoA)
-                    .frame(height: geo.size.height * 0.74)
+                    .frame(height: geo.size.height * 0.66)
                     .padding(.horizontal, 10)
                     .padding(.top, 10)
 
-                // Compact text strip — left-aligned, bottom of card
-                VStack(alignment: .leading, spacing: 4) {
+                // Text strip — verdict top, big % bottom
+                VStack(alignment: .leading, spacing: 0) {
                     Text(result.verdict.lowercased())
-                        .font(.verdict(21))
+                        .font(.verdict(20))
                         .foregroundColor(.white)
                         .lineLimit(2)
                         .minimumScaleFactor(0.7)
+                        .padding(.bottom, 4)
+
+                    Spacer()
 
                     if result.confidence > 0 {
-                        Text("\(result.confidence)% confidence from simulation")
+                        Text("\(result.confidence)%")
+                            .font(.pct(62))
+                            .foregroundColor(pctGray)
+                            .minimumScaleFactor(0.5)
+                            .lineLimit(1)
+
+                        Text("confidence from simulation")
                             .font(.label)
                             .foregroundColor(labelGray)
+                            .padding(.top, 2)
                     } else {
                         Text("no simulation needed")
                             .font(.system(size: 13, weight: .regular))
@@ -64,7 +74,7 @@ struct CardLayoutA: View {
                             .tracking(0.5)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
             }
