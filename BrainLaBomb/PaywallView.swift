@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct PaywallView: View {
+    var onDismiss: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedPlan: Int = 1
 
     private var paywallVideoURL: URL? {
         Bundle.main.url(forResource: "paywall_bg", withExtension: "mov")
@@ -21,7 +23,7 @@ struct PaywallView: View {
             VStack(spacing: 0) {
                 HStack {
                     Spacer()
-                    Button { dismiss() } label: {
+                    Button { onDismiss?(); dismiss() } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .medium))
                             .foregroundColor(Color(white: 0.4))
@@ -70,20 +72,17 @@ struct PaywallView: View {
 
                 Spacer()
 
-                VStack(spacing: 6) {
-                    Text("$29.99 / year")
-                        .font(.custom("HelveticaNeue", size: 32))
-                        .foregroundColor(.white)
-                    Text("less than $2.50 a month.")
-                        .font(.custom("HelveticaNeue", size: 14))
-                        .foregroundColor(Color(white: 0.35))
+                VStack(spacing: 10) {
+                    paywallPlanCard(index: 0, title: "CORE", price: "$39.99", subtitle: "500 thinks · 6 months", detail: "everything unlocked", isProBadge: false)
+                    paywallPlanCard(index: 1, title: "PRO", price: "$99.99/year", subtitle: "unlimited thinks", detail: "chat + full memory", isProBadge: true)
                 }
+                .padding(.horizontal, 24)
                 .padding(.bottom, 24)
 
                 Button {
                     // TODO: RevenueCat purchase call
                 } label: {
-                    Text("unlock your brain")
+                    Text(selectedPlan == 0 ? "get Core — $39.99" : "start my 3-day free trial")
                         .font(.custom("HelveticaNeue", size: 17))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
@@ -125,12 +124,63 @@ struct PaywallView: View {
                 }
                 .padding(.bottom, 8)
 
-                Text("billed annually · cancel anytime in App Store settings")
-                    .font(.custom("HelveticaNeue", size: 11))
-                    .foregroundColor(Color(white: 0.18))
-                    .padding(.bottom, 32)
+                if selectedPlan == 1 {
+                    Text("3 days free, then $99.99/year. Cancel anytime.")
+                        .font(.custom("HelveticaNeue", size: 11))
+                        .foregroundColor(Color(white: 0.18))
+                        .padding(.bottom, 32)
+                } else {
+                    Text("$39.99 one-time purchase. No subscription.")
+                        .font(.custom("HelveticaNeue", size: 11))
+                        .foregroundColor(Color(white: 0.18))
+                        .padding(.bottom, 32)
+                }
             }
         }
+    }
+
+    private func paywallPlanCard(index: Int, title: String, price: String, subtitle: String, detail: String, isProBadge: Bool) -> some View {
+        let isSelected = selectedPlan == index
+        return Button {
+            selectedPlan = index
+        } label: {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(spacing: 8) {
+                        Text(title)
+                            .font(.custom("HelveticaNeue", size: 15))
+                            .foregroundColor(.white)
+                        if isProBadge {
+                            Text("3 DAYS FREE")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundColor(.black)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 3)
+                                .background(Color.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                        }
+                    }
+                    Text(subtitle)
+                        .font(.custom("HelveticaNeue", size: 13))
+                        .foregroundColor(Color(white: 0.4))
+                    Text(detail)
+                        .font(.custom("HelveticaNeue", size: 13))
+                        .foregroundColor(Color(white: 0.4))
+                }
+                Spacer()
+                Text(price)
+                    .font(.custom("HelveticaNeue", size: 14))
+                    .foregroundColor(.white)
+            }
+            .padding(16)
+            .background(isSelected ? Color(white: 0.08) : Color(white: 0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.white : Color(white: 0.12), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 
     private func paywallRow(icon: String, title: String, description: String) -> some View {

@@ -1,5 +1,6 @@
 import SwiftUI
 
+
 struct StoriesView: View {
     let result: DecisionResult
     @ObservedObject var viewModel: AppViewModel
@@ -18,23 +19,142 @@ struct StoriesView: View {
     @State private var reasoningDebug = false
     @State private var debugModeOverride: DecisionMode? = nil
     @State private var showPaywall = false
-    @State private var debugIsPro = false
     @State private var debugForcePattern = false
+    @State private var debugForceDoubleReasoning = false
+    @State private var debugForceDoubleHistory = false
+    @State private var reasoningAvailableHeight: CGFloat = 0
+    @State private var historyAvailableHeight: CGFloat = 0
 
     private var activeMode: DecisionMode { debugModeOverride ?? result.mode }
-    var isPro: Bool {
+
+    private var reasoningParagraph: String {
         #if DEBUG
-        return debugIsPro
+        if debugForceDoubleReasoning {
+            return "Night shifts rewire your sleep permanently over time. No holidays means your body never fully recovers. The money feels worth it now. Six months in, it won't. Your nervous system knows the difference between a hard season and a bad deal. The version of you that takes this job is not the version that thrives — it is the version that survives, and only barely. You already know this. The fact that you are still asking means part of you is hoping someone will give you permission to walk away. Here it is. Walk away. There is no version of this story where the tradeoff was worth it. People who took roles like this one almost always describe the same arc: first month feels manageable, third month feels heavy, sixth month feels like a trap. By then the money has been spent, the routine has calcified, and leaving feels harder than staying. Do not let that be you."
+        }
+        #endif
+        let quotes = CharacterSet(charactersIn: "\"\u{201C}\u{201D}\u{2018}\u{2019}'")
+        return result.report.reasoning.joined(separator: " ").trimmingCharacters(in: quotes)
+    }
+
+    private var reasoningFont: UIFont { UIFont(name: "HelveticaNeue", size: 22) ?? .systemFont(ofSize: 22) }
+    private var reasoningAttrs: [NSAttributedString.Key: Any] {
+        let ps = NSMutableParagraphStyle(); ps.lineSpacing = 6
+        return [.font: reasoningFont, .paragraphStyle: ps]
+    }
+    private func measuredTextHeight(_ text: String, width: CGFloat) -> CGFloat {
+        (text as NSString).boundingRect(
+            with: CGSize(width: width, height: .infinity),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: reasoningAttrs, context: nil
+        ).height
+    }
+
+    private var needsTwoReasoningCards: Bool {
+        #if DEBUG
+        if debugForceDoubleReasoning { return true }
+        #endif
+        guard reasoningAvailableHeight > 0 else { return false }
+        return measuredTextHeight(reasoningParagraph, width: UIScreen.main.bounds.width - 56) > reasoningAvailableHeight
+    }
+    private var reasoningOffset: Int { needsTwoReasoningCards ? 1 : 0 }
+
+    private var reasoningPart1: String {
+        guard needsTwoReasoningCards, reasoningAvailableHeight > 0 else { return reasoningParagraph }
+        let text = reasoningParagraph
+        let w = UIScreen.main.bounds.width - 56
+        var lo = 0, hi = text.count, fitCount = 0
+        while lo <= hi {
+            let mid = (lo + hi) / 2
+            if measuredTextHeight(String(text.prefix(mid)), width: w) <= reasoningAvailableHeight {
+                fitCount = mid; lo = mid + 1
+            } else { hi = mid - 1 }
+        }
+        guard fitCount > 0 else { return String(text.prefix(text.count / 2)) }
+        let prefix = String(text.prefix(fitCount))
+        if let lastSpace = prefix.lastIndex(of: " ") { return String(prefix[..<lastSpace]) }
+        return prefix
+    }
+
+    private var reasoningPart2: String {
+        guard needsTwoReasoningCards else { return "" }
+        return String(reasoningParagraph.dropFirst(reasoningPart1.count)).trimmingCharacters(in: .whitespaces)
+    }
+
+    private var isPaidTier: Bool {
+        #if DEBUG
+        return viewModel.debugTier == .core || viewModel.debugTier == .pro
         #else
-        return false // TODO: replace with RevenueCat check
+        return false // TODO: RevenueCat
         #endif
     }
 
-    private let totalCards = 5
+    private var canChat: Bool {
+        #if DEBUG
+        return viewModel.debugTier == .pro
+        #else
+        return false // TODO: RevenueCat
+        #endif
+    }
+
+    private var historyInsightText: String {
+        #if DEBUG
+        if debugForceDoubleHistory {
+            return "Every think you've done involves someone else's expectations sitting inside your decision. Your parents. Your girlfriend. Your manager. You frame your choices around what they need first and what you need second. That pattern is consistent enough now that it's worth naming. The people in your life aren't asking you to shrink — you are doing that preemptively, anticipating their needs before they even express them. That is not selflessness. That is a habit built from a time when it felt necessary. It may not be necessary anymore. The question is whether you are ready to find out what happens when you stop doing it."
+        }
+        #endif
+        return result.report.historyInsight
+    }
+
+    private var shouldShowHistoryCard: Bool {
+        !result.report.historyInsight.isEmpty && viewModel.thinkCountForPattern >= 5
+    }
+
+    private var historyAttrs: [NSAttributedString.Key: Any] {
+        let ps = NSMutableParagraphStyle(); ps.lineSpacing = 8
+        return [.font: UIFont(name: "HelveticaNeue", size: 22) ?? .systemFont(ofSize: 22), .paragraphStyle: ps]
+    }
+    private func measuredHistoryHeight(_ text: String, width: CGFloat) -> CGFloat {
+        (text as NSString).boundingRect(
+            with: CGSize(width: width, height: .infinity),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: historyAttrs, context: nil
+        ).height
+    }
+    private var needsTwoHistoryCards: Bool {
+        #if DEBUG
+        if debugForceDoubleHistory { return true }
+        #endif
+        guard shouldShowHistoryCard, historyAvailableHeight > 0 else { return false }
+        return measuredHistoryHeight(historyInsightText, width: UIScreen.main.bounds.width - 56) > historyAvailableHeight
+    }
+    private var historyOffset: Int { needsTwoHistoryCards ? 1 : 0 }
+    private var historyPart1: String {
+        guard needsTwoHistoryCards, historyAvailableHeight > 0 else { return historyInsightText }
+        let text = historyInsightText
+        let w = UIScreen.main.bounds.width - 56
+        var lo = 0, hi = text.count, fitCount = 0
+        while lo <= hi {
+            let mid = (lo + hi) / 2
+            if measuredHistoryHeight(String(text.prefix(mid)), width: w) <= historyAvailableHeight {
+                fitCount = mid; lo = mid + 1
+            } else { hi = mid - 1 }
+        }
+        guard fitCount > 0 else { return String(text.prefix(text.count / 2)) }
+        let prefix = String(text.prefix(fitCount))
+        if let lastSpace = prefix.lastIndex(of: " ") { return String(prefix[..<lastSpace]) }
+        return prefix
+    }
+    private var historyPart2: String {
+        guard needsTwoHistoryCards else { return "" }
+        return String(historyInsightText.dropFirst(historyPart1.count)).trimmingCharacters(in: .whitespaces)
+    }
+
+    private var totalCards: Int { (shouldShowHistoryCard ? 6 : 5) + reasoningOffset + historyOffset }
     private let storyDuration: TimeInterval = 7.0
 
     private var tooltipText: String {
-        currentIndex == 1
+        currentIndex == 1 + reasoningOffset
             ? "these percentages show how the\nmajority outcome breaks down across\ndifferent scenarios. they add up\nto roughly the confidence score."
             : "these are the minority outcomes.\nthe scenarios where the opposite\nhappened and why. always worth\nknowing both sides."
     }
@@ -47,10 +167,14 @@ struct StoriesView: View {
             Group {
                 switch currentIndex {
                 case 0: card1
-                case 1: card2
-                case 2: card3
-                case 3:
-                    if isPro { archetypeCard } else { blurredArchetypeCard }
+                case 1 where needsTwoReasoningCards: card1b
+                case 1 + reasoningOffset: card2
+                case 2 + reasoningOffset: card3
+                case 3 + reasoningOffset:
+                    if isPaidTier { archetypeCard } else { blurredArchetypeCard }
+                case 4 + reasoningOffset:
+                    if shouldShowHistoryCard { historyInsightCard } else { patternCard }
+                case 5 + reasoningOffset where needsTwoHistoryCards: historyInsightCard2
                 default: patternCard
                 }
             }
@@ -69,14 +193,14 @@ struct StoriesView: View {
             }
 
             // ── Lock overlay for blurred cards (above tap zones, below Chrome) ──
-            if (currentIndex == 3 && !isPro) || (currentIndex == 4 && !isPro) {
+            if (currentIndex == 3 + reasoningOffset && !isPaidTier) || (currentIndex == 4 + reasoningOffset && !shouldShowHistoryCard && !isPaidTier) {
                 VStack {
                     Spacer()
                     VStack(spacing: 16) {
                         Image(systemName: "lock.fill")
                             .font(.system(size: 22))
                             .foregroundColor(Color(white: 0.45))
-                        Text(currentIndex == 3
+                        Text(currentIndex == 3 + reasoningOffset
                             ? "unlock to see what\nthis means about you"
                             : "unlock to reveal\nyour pattern identity")
                             .font(.custom("HelveticaNeue", size: 15))
@@ -122,9 +246,18 @@ struct StoriesView: View {
 
                 // Buttons row
                 HStack(alignment: .center, spacing: 0) {
+                    #if DEBUG
+                    let isHaiku = result.modelUsed.contains("haiku")
+                    Text(isHaiku ? "HAIKU" : "SONNET")
+                        .font(.system(size: 9, weight: .medium, design: .monospaced))
+                        .foregroundColor(isHaiku ? .orange : Color(white: 0.4))
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Color(white: 0.12).clipShape(Capsule()))
+                        .padding(.leading, 18)
+                    #endif
                     Spacer()
                     // Info button (cards 2 & 3)
-                    if (currentIndex == 1 || currentIndex == 2) && (activeMode == .decision || activeMode == .direction) {
+                    if (currentIndex == 1 + reasoningOffset || currentIndex == 2 + reasoningOffset) && (activeMode == .decision || activeMode == .direction) {
                         Button { showTooltip.toggle() } label: {
                             Image(systemName: "info.circle")
                                 .font(.system(size: 16))
@@ -147,7 +280,7 @@ struct StoriesView: View {
                 if currentIndex == totalCards - 1 {
                     // ── Last card buttons ─────────────────────────────────────
                     VStack(spacing: 12) {
-                        if isPro {
+                        if canChat {
                             Button { onContinueInChat() } label: {
                                 HStack {
                                     Text("continue in chat")
@@ -203,22 +336,6 @@ struct StoriesView: View {
                                     .clipShape(Circle())
                             }
                         }
-                        // PRO unlock debug
-                        Button {
-                            debugIsPro.toggle()
-                            #if DEBUG
-                            if debugIsPro && viewModel.patternData == nil {
-                                viewModel.injectMockPatternData()
-                            }
-                            #endif
-                        } label: {
-                            Text("PRO")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(debugIsPro ? Color.black : Color(white: 0.55))
-                                .frame(width: 38, height: 28)
-                                .background(debugIsPro ? Color.white : Color(white: 0.14))
-                                .clipShape(Capsule())
-                        }
                         // Pattern debug: force pattern card to show full data
                         Button {
                             debugForcePattern.toggle()
@@ -233,6 +350,22 @@ struct StoriesView: View {
                                 .foregroundColor(debugForcePattern ? Color.black : Color(white: 0.55))
                                 .frame(width: 38, height: 28)
                                 .background(debugForcePattern ? Color.white : Color(white: 0.14))
+                                .clipShape(Capsule())
+                        }
+                        Button { debugForceDoubleReasoning.toggle() } label: {
+                            Text("R2")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(debugForceDoubleReasoning ? Color.black : Color(white: 0.55))
+                                .frame(width: 34, height: 28)
+                                .background(debugForceDoubleReasoning ? Color.white : Color(white: 0.14))
+                                .clipShape(Capsule())
+                        }
+                        Button { debugForceDoubleHistory.toggle() } label: {
+                            Text("H2")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(debugForceDoubleHistory ? Color.black : Color(white: 0.55))
+                                .frame(width: 34, height: 28)
+                                .background(debugForceDoubleHistory ? Color.white : Color(white: 0.14))
                                 .clipShape(Capsule())
                         }
                         // Mode override buttons
@@ -307,13 +440,11 @@ struct StoriesView: View {
     // MARK: – Card 1: Reasoning ───────────────────────────────────────────────
 
     private var card1: some View {
-        let quotes = CharacterSet(charactersIn: "\"\u{201C}\u{201D}\u{2018}\u{2019}'")
-        let para = result.report.reasoning.joined(separator: " ").trimmingCharacters(in: quotes)
-        return Group {
+        Group {
             if reasoningDebug {
                 VStack {
                     Spacer()
-                    Text(para)
+                    Text(reasoningParagraph)
                         .font(.custom("HelveticaNeue", size: 22))
                         .foregroundColor(.white)
                         .lineSpacing(6)
@@ -322,26 +453,45 @@ struct StoriesView: View {
                     Spacer()
                 }
             } else {
-                ScrollView(showsIndicators: false) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        cardHeading("reasoning")
-                            .padding(.top, 72)
-
-                        Spacer().frame(height: 28)
-
-                        Text(para)
-                            .font(.custom("HelveticaNeue", size: 22))
-                            .foregroundColor(.white)
-                            .lineSpacing(6)
-                            .fixedSize(horizontal: false, vertical: true)
-
-                        Spacer().frame(height: 60)
-                    }
-                    .padding(.horizontal, 28)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 0) {
+                    cardHeading("reasoning")
+                        .padding(.top, 72)
+                    Spacer().frame(height: 28)
+                    Text(needsTwoReasoningCards ? reasoningPart1 : reasoningParagraph)
+                        .font(.custom("HelveticaNeue", size: 22))
+                        .foregroundColor(.white)
+                        .lineSpacing(6)
+                    Spacer()
                 }
+                .padding(.horizontal, 28)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
         }
+        .background(
+            GeometryReader { geo in
+                // Capture available text height once the card is laid out
+                Color.clear.onAppear {
+                    reasoningAvailableHeight = geo.size.height - 72 - 16 - 28 - 60
+                }
+            }
+        )
+    }
+
+    // MARK: – Card 1b: Reasoning overflow ────────────────────────────────────
+
+    private var card1b: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cardHeading("reasoning, cont.")
+                .padding(.top, 72)
+            Spacer().frame(height: 28)
+            Text(reasoningPart2)
+                .font(.custom("HelveticaNeue", size: 22))
+                .foregroundColor(.white)
+                .lineSpacing(6)
+            Spacer()
+        }
+        .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     // MARK: – Card 2 ──────────────────────────────────────────────────────────
@@ -648,21 +798,157 @@ struct StoriesView: View {
                 .padding(.top, 72)
                 .padding(.bottom, 24)
 
-            Group {
-                if !debugForcePattern && viewModel.thinkCountForPattern < 5 {
-                    earlyPatternView
-                } else if let pattern = viewModel.patternData {
-                    fullPatternView(pattern: pattern)
-                } else {
-                    earlyPatternView
+            ZStack {
+                Group {
+                    if !debugForcePattern && viewModel.thinkCountForPattern < 5 {
+                        earlyPatternView
+                    } else if let pattern = viewModel.patternData {
+                        fullPatternView(pattern: pattern)
+                    } else {
+                        earlyPatternView
+                    }
+                }
+                .blur(radius: isPaidTier ? 0 : 8)
+                .allowsHitTesting(isPaidTier)
+
+                if !isPaidTier {
+                    VStack(spacing: 16) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(Color(white: 0.5))
+                        Text("unlock to reveal\nyour pattern identity")
+                            .font(.custom("HelveticaNeue", size: 15))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                        Button { showPaywall = true } label: {
+                            Text("unlock pro →")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.black)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 10)
+                                .background(Color.white)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
                 }
             }
-            .blur(radius: isPro ? 0 : 8)
-            .allowsHitTesting(isPro)
 
             Spacer()
         }
         .padding(.horizontal, 28)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+    }
+
+    // MARK: – Card 6: History Insight ───────────────────────────────────────
+
+    private var historyInsightCard: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cardHeading("from your thinks")
+                .padding(.horizontal, 28)
+                .padding(.top, 72)
+                .padding(.bottom, 32)
+
+            if isPaidTier {
+                Text(historyPart1)
+                    .font(.custom("HelveticaNeue", size: 22))
+                    .foregroundColor(.white)
+                    .lineSpacing(8)
+                    .padding(.horizontal, 28)
+            } else {
+                ZStack {
+                    Text(historyPart1)
+                        .font(.custom("HelveticaNeue", size: 22))
+                        .foregroundColor(.white)
+                        .lineSpacing(8)
+                        .padding(.horizontal, 28)
+                        .blur(radius: 8)
+                        .allowsHitTesting(false)
+
+                    VStack(spacing: 16) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(Color(white: 0.5))
+                        Text("unlock to see what\nthe brain noticed about you")
+                            .font(.custom("HelveticaNeue", size: 15))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                        Button { showPaywall = true } label: {
+                            Text("unlock pro →")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.black)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 10)
+                                .background(Color.white)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .background(
+            GeometryReader { geo in
+                Color.clear.onAppear {
+                    historyAvailableHeight = geo.size.height - 72 - 16 - 32 - 60
+                }
+            }
+        )
+    }
+
+    private var historyInsightCard2: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            cardHeading("from your thinks, cont.")
+                .padding(.horizontal, 28)
+                .padding(.top, 72)
+                .padding(.bottom, 32)
+
+            if isPaidTier {
+                Text(historyPart2)
+                    .font(.custom("HelveticaNeue", size: 22))
+                    .foregroundColor(.white)
+                    .lineSpacing(8)
+                    .padding(.horizontal, 28)
+            } else {
+                ZStack {
+                    Text(historyPart2)
+                        .font(.custom("HelveticaNeue", size: 22))
+                        .foregroundColor(.white)
+                        .lineSpacing(8)
+                        .padding(.horizontal, 28)
+                        .blur(radius: 8)
+                        .allowsHitTesting(false)
+
+                    VStack(spacing: 16) {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(Color(white: 0.5))
+                        Text("unlock to see what\nthe brain noticed about you")
+                            .font(.custom("HelveticaNeue", size: 15))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(4)
+                        Button { showPaywall = true } label: {
+                            Text("unlock pro →")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.black)
+                                .padding(.horizontal, 24)
+                                .padding(.vertical, 10)
+                                .background(Color.white)
+                                .clipShape(Capsule())
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+            }
+
+            Spacer()
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
@@ -746,6 +1032,8 @@ struct StoriesView: View {
                 .foregroundColor(Color(white: 0.35))
                 .lineSpacing(5)
                 .italic()
+                .fixedSize(horizontal: false, vertical: true)
+                .multilineTextAlignment(.leading)
         }
     }
 

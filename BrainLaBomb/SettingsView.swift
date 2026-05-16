@@ -5,7 +5,7 @@ struct SettingsView: View {
     @ObservedObject var viewModel: AppViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var notificationsEnabled = false
-    @State private var showResetConfirmation = false
+    @State private var showResetHistoryConfirmation = false
     @State private var showPaywall = false
 
     var body: some View {
@@ -28,6 +28,10 @@ struct SettingsView: View {
                         feedbackSection
                         divider
                         dangerSection
+                        #if DEBUG
+                        divider
+                        debugSection
+                        #endif
                     }
                     .padding(.bottom, 40)
                 }
@@ -62,11 +66,44 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             sectionHeader("your brain")
             settingsRow(
-                label: "thinks used",
-                value: viewModel.thinksRemaining <= 0
-                    ? "limit reached"
-                    : "\(viewModel.thinksUsed) of \(Constants.maxFreeThinks)"
+                label: "thinks this month",
+                value: "\(viewModel.monthlyThinkCount) of 200 on Sonnet"
             )
+            if viewModel.currentTier == .free {
+                settingsRow(
+                    label: "thinks used",
+                    value: "\(viewModel.thinksUsed) of \(Constants.maxFreeThinks) free"
+                )
+                if viewModel.thinkLimitReached {
+                    settingsRow(label: "free thinks used up", action: {
+                        viewModel.appState = .paywallRequired
+                        dismiss()
+                    })
+                } else {
+                    settingsRow(
+                        label: "\(viewModel.thinksRemaining) thinks remaining",
+                        value: nil
+                    )
+                }
+            } else if viewModel.currentTier == .core {
+                settingsRow(
+                    label: "thinks used",
+                    value: "\(viewModel.coreThinksUsed) of \(viewModel.coreThinkLimit)"
+                )
+                settingsRow(
+                    label: "\(viewModel.coreThinksRemaining) thinks remaining",
+                    value: nil
+                )
+            } else {
+                settingsRow(
+                    label: "chat messages this month",
+                    value: "\(viewModel.monthlyChatCount)"
+                )
+                settingsRow(
+                    label: "thinks used total",
+                    value: "\(viewModel.thinksUsed)"
+                )
+            }
             Button { showPaywall = true } label: {
                 Text("unlock unlimited thinks")
                     .font(.custom("HelveticaNeue", size: 15))
@@ -167,9 +204,10 @@ struct SettingsView: View {
     private var dangerSection: some View {
         VStack(spacing: 0) {
             sectionHeader("data")
-            Button { showResetConfirmation = true } label: {
+
+            Button { showResetHistoryConfirmation = true } label: {
                 HStack {
-                    Text("delete all thinks")
+                    Text("clear think history")
                         .font(.system(size: 15, weight: .regular))
                         .foregroundColor(Color(red: 0.8, green: 0.2, blue: 0.2))
                     Spacer()
@@ -177,7 +215,7 @@ struct SettingsView: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 14)
             }
-            Text("permanently deletes all your thinks and chat history from this device. cannot be undone.")
+            Text("removes all your thinks and resets the brain's memory of you. your account and usage are kept.")
                 .font(.system(size: 12, weight: .regular))
                 .foregroundColor(Color(white: 0.3))
                 .lineSpacing(4)
@@ -185,15 +223,29 @@ struct SettingsView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 20)
         }
-        .alert("delete everything?", isPresented: $showResetConfirmation) {
+        .alert("clear think history?", isPresented: $showResetHistoryConfirmation) {
             Button("cancel", role: .cancel) {}
-            Button("delete everything", role: .destructive) {
-                viewModel.clearAllData()
+            Button("clear history", role: .destructive) {
+                viewModel.resetBrainMemory()
+                dismiss()
             }
         } message: {
-            Text("this will permanently delete all your thinks and chat history. this cannot be undone.")
+            Text("this removes all your thinks, pattern data, and memory. cannot be undone.")
         }
     }
+
+    #if DEBUG
+    private var debugSection: some View {
+        VStack(spacing: 0) {
+            sectionHeader("debug")
+            settingsRow(label: "replay onboarding", action: {
+                UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                NotificationCenter.default.post(name: .replayOnboarding, object: nil)
+                dismiss()
+            })
+        }
+    }
+    #endif
 
     // MARK: - Helpers
 

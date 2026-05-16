@@ -53,6 +53,14 @@ struct ContentView: View {
                 )
                 .transition(.opacity)
 
+            case .paywallRequired:
+                PaywallView(onDismiss: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        viewModel.appState = .home
+                    }
+                })
+                .transition(.opacity)
+
             case .error(let msg):
                 ErrorView(message: msg) {
                     viewModel.retry()
@@ -83,6 +91,9 @@ struct ContentView: View {
                 showOnboarding = false
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .replayOnboarding)) { _ in
+            showOnboarding = true
+        }
     }
 
     private var screenKey: Int {
@@ -94,8 +105,15 @@ struct ContentView: View {
         case .input:            return 1
         case .error:            return 6
         case .home:             return 0
+        case .paywallRequired:  return 7
         }
     }
+}
+
+// MARK: - Notification Names
+
+extension Notification.Name {
+    static let replayOnboarding = Notification.Name("replayOnboarding")
 }
 
 // MARK: - Error View

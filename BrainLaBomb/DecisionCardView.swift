@@ -14,6 +14,7 @@ struct DecisionCardView: View {
     let onChatMessagesUpdated:   ([ChatBubble]) -> Void
 
     @State private var layoutIndex: Int     = 0
+    @State private var backCardScrolling    = false
     @State private var cardScale: CGFloat   = 0.92
     @State private var cardAngle: Double    = 0
     @State private var tiltX:     Double    = 0
@@ -76,10 +77,15 @@ struct DecisionCardView: View {
         }
         .onAppear {
             layoutIndex = Int.random(in: 0...4)
-            withAnimation(.spring(response: 1.0, dampingFraction: 0.85)) {
-                cardOffset  = 0
-                cardOpacity = 1
-                cardScale   = 1.0
+            // Defer one run loop tick so this animation doesn't compete with
+            // the sheet/fullScreenCover presentation animation, which would
+            // interrupt it and leave the card stuck at the initial small scale.
+            DispatchQueue.main.async {
+                withAnimation(.spring(response: 1.0, dampingFraction: 0.85)) {
+                    cardOffset  = 0
+                    cardOpacity = 1
+                    cardScale   = 1.0
+                }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
@@ -91,8 +97,12 @@ struct DecisionCardView: View {
             DragGesture(minimumDistance: 30)
                 .onEnded { v in
                     guard allowSwipeDismiss else { return }
-                    if v.translation.height > 100 && abs(v.translation.width) < 80 {
-                        dismissCard()
+                    let isDownSwipe = abs(v.translation.width) < 80
+                    if frontVisible {
+                        if v.translation.height > 100 && isDownSwipe { dismissCard() }
+                    } else if !backCardScrolling {
+                        // Back card: require a more deliberate swipe (larger throw)
+                        if v.translation.height > 200 && isDownSwipe { dismissCard() }
                     }
                 }
         )
@@ -161,9 +171,11 @@ struct DecisionCardView: View {
                 originalQuestion: originalQuestion,
                 viewModel: viewModel,
                 thinkID: thinkID,
+                layoutIndex: layoutIndex,
                 existingChatMessages: existingChatMessages,
                 onChatMessagesUpdated: onChatMessagesUpdated,
-                onNewThink: onReset
+                onNewThink: onReset,
+                onScrollingChanged: { backCardScrolling = $0 }
             )
                 .overlay(RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
@@ -171,6 +183,21 @@ struct DecisionCardView: View {
                 .opacity(frontVisible ? 0 : 1)
 
             DecisionCard(result: result, layoutIndex: layoutIndex)
+                .overlay(alignment: .bottomTrailing) {
+                    #if DEBUG
+                    VStack(alignment: .trailing, spacing: 2) {
+                        let isHaiku = result.modelUsed.contains("haiku")
+                        Text(isHaiku ? "HAIKU" : "SONNET")
+                            .foregroundColor(isHaiku ? .orange : Color(white: 0.45))
+                        Text(viewModel.debugTier == .free ? "FREE" : viewModel.debugTier == .core ? "CORE" : "PRO")
+                            .foregroundColor(viewModel.debugTier == .free ? Color(white: 0.4) : viewModel.debugTier == .core ? .blue : .green)
+                    }
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .opacity(0.7)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    #endif
+                }
                 .overlay(RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
                 .rotation3DEffect(.degrees(cardAngle), axis: (0, 1, 0), perspective: 1.1)

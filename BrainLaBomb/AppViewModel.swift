@@ -9,6 +9,13 @@ enum AppState {
     case processingSecond
     case result(DecisionResult)
     case error(String)
+    case paywallRequired
+}
+
+enum AppTier {
+    case free
+    case core
+    case pro
 }
 
 class AppViewModel: ObservableObject {
@@ -34,15 +41,50 @@ class AppViewModel: ObservableObject {
             return decoded
         }
         set {
-            if let encoded = try? JSONEncoder().encode(newValue) {
+            if let value = newValue,
+               let encoded = try? JSONEncoder().encode(value) {
                 UserDefaults.standard.set(encoded, forKey: "patternData")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "patternData")
             }
         }
     }
 
     var thinkCountForPattern: Int { thinkHistory.count }
 
+    // MARK: - Tier Management
+
+    var currentTier: AppTier {
+        // TODO: replace with RevenueCat check when integrated
+        #if DEBUG
+        return debugTier
+        #else
+        return .free
+        #endif
+    }
+
+    #if DEBUG
+    @Published var debugTier: AppTier = .free
+    #endif
+
+    var coreThinksUsed: Int {
+        get { UserDefaults.standard.integer(forKey: "coreThinksUsed") }
+        set { UserDefaults.standard.set(newValue, forKey: "coreThinksUsed") }
+    }
+
+    var coreThinkLimit: Int { 500 }
+    var coreSonnetLimit: Int { 350 }
+
+    var coreThinksRemaining: Int {
+        max(0, coreThinkLimit - coreThinksUsed)
+    }
+
+    var coreLimitReached: Bool {
+        currentTier == .core && coreThinksUsed >= coreThinkLimit
+    }
+
     // MARK: - Thinks Counter
+
     var thinksUsed: Int {
         get { UserDefaults.standard.integer(forKey: Constants.thinksUsedKey) }
         set { UserDefaults.standard.set(newValue, forKey: Constants.thinksUsedKey) }
@@ -52,9 +94,98 @@ class AppViewModel: ObservableObject {
         max(0, Constants.maxFreeThinks - thinksUsed)
     }
 
-    var hasThinkRemaining: Bool {
-        thinksRemaining > 0
+    var thinkLimitReached: Bool {
+        switch currentTier {
+        case .free: return thinksUsed >= Constants.maxFreeThinks
+        case .core: return coreLimitReached
+        case .pro:  return false
+        }
     }
+
+    // MARK: - Monthly Think Counter
+
+    var monthlyThinkCount: Int {
+        get {
+            let lastResetKey = "lastMonthlyReset"
+            let countKey = "monthlyThinkCount"
+            let calendar = Calendar.current
+            let now = Date()
+            if let lastReset = UserDefaults.standard.object(forKey: lastResetKey) as? Date {
+                if !calendar.isDate(lastReset, equalTo: now, toGranularity: .month) {
+                    UserDefaults.standard.set(0, forKey: countKey)
+                    UserDefaults.standard.set(now, forKey: lastResetKey)
+                    return 0
+                }
+            } else {
+                UserDefaults.standard.set(now, forKey: lastResetKey)
+                return 0
+            }
+            return UserDefaults.standard.integer(forKey: countKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "monthlyThinkCount")
+        }
+    }
+
+    func incrementThinkCounters() {
+        monthlyThinkCount += 1
+        if currentTier == .core {
+            coreThinksUsed += 1
+        }
+    }
+
+    // MARK: - Chat
+
+    var chatModelForCurrentTier: String {
+        // Chat is always Haiku — only Pro users can chat
+        return "claude-haiku-4-5-20251001"
+    }
+
+    var monthlyChatCount: Int {
+        get {
+            let countKey = "monthlyChatCount"
+            let lastResetKey = "lastMonthlyChatReset"
+            let calendar = Calendar.current
+            let now = Date()
+            if let lastReset = UserDefaults.standard.object(forKey: lastResetKey) as? Date {
+                if !calendar.isDate(lastReset, equalTo: now, toGranularity: .month) {
+                    UserDefaults.standard.set(0, forKey: countKey)
+                    UserDefaults.standard.set(now, forKey: lastResetKey)
+                    return 0
+                }
+            } else {
+                UserDefaults.standard.set(now, forKey: lastResetKey)
+                return 0
+            }
+            return UserDefaults.standard.integer(forKey: countKey)
+        }
+        set {
+            UserDefaults.standard.set(newValue, forKey: "monthlyChatCount")
+        }
+    }
+
+    func incrementMonthlyChatCount() {
+        monthlyChatCount += 1
+    }
+
+    var shouldUseHaiku: Bool {
+        #if DEBUG
+        return forceHaikuMode
+        #endif
+        // Full Haiku for all tiers.
+        // To revert to hybrid: update shouldUseHaiku and pass useHaiku: shouldUseHaiku to firstPass/secondPass.
+        return true
+        // Previous hybrid logic:
+        // switch currentTier {
+        // case .free: return false
+        // case .core: return coreThinksUsed >= coreSonnetLimit
+        // case .pro:  return monthlyThinkCount > 200
+        // }
+    }
+
+    #if DEBUG
+    @Published var forceHaikuMode: Bool = false
+    #endif
 
     // MARK: - Init
     init() {
@@ -63,12 +194,16 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Flow
     func submitQuestion(_ question: String) {
+        guard !thinkLimitReached else {
+            appState = .paywallRequired
+            return
+        }
         originalQuestion = question
         appState = .processingFirst
 
         currentTask = Task {
             do {
-                let firstPass = try await APIClient.shared.firstPass(question: question)
+                let firstPass = try await APIClient.shared.firstPass(question: question, useHaiku: shouldUseHaiku)
 
                 await MainActor.run {
                     if firstPass.needsQuestion && !firstPass.question.isEmpty {
@@ -109,11 +244,13 @@ class AppViewModel: ObservableObject {
             let result = try await APIClient.shared.secondPass(
                 question: originalQuestion,
                 followUpAnswer: answer,
-                thinkHistory: thinkHistory
+                thinkHistory: thinkHistory,
+                useHaiku: shouldUseHaiku
             )
 
             await MainActor.run {
                 self.thinksUsed += 1
+                self.incrementThinkCounters()
                 self.saveThink(result: result)
                 self.appState = .result(result)
             }
@@ -212,10 +349,22 @@ class AppViewModel: ObservableObject {
         thinkHistory = decoded
     }
 
-    func clearAllData() {
-        UserDefaults.standard.removeObject(forKey: Constants.thinkHistoryKey)
-        UserDefaults.standard.removeObject(forKey: Constants.thinksUsedKey)
+    // Clears think history and pattern memory only.
+    // All counters (thinksUsed, coreThinksUsed, monthly counts) are intentionally
+    // kept so tier enforcement can't be gamed by resetting memory.
+    func resetBrainMemory() {
+        // Clear in-memory array first
         thinkHistory = []
+
+        // Clear UserDefaults
+        UserDefaults.standard.removeObject(forKey: Constants.thinkHistoryKey)
+        UserDefaults.standard.removeObject(forKey: "patternData")
+
+        // Reset pattern data in memory
+        patternData = nil
+
+        // Navigate home and notify views
+        appState = .home
         objectWillChange.send()
     }
 }

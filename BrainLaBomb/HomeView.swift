@@ -125,7 +125,7 @@ struct HomeView: View {
                     }
 
                     #if DEBUG
-Button {
+                    Button {
                         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
                             DispatchQueue.main.async {
                                 if granted {
@@ -137,6 +137,28 @@ Button {
                         Text("notif")
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundColor(Color(white: 0.35))
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(Color(white: 0.12).clipShape(Capsule()))
+                    }
+                    Button {
+                        viewModel.forceHaikuMode.toggle()
+                    } label: {
+                        Text(viewModel.forceHaikuMode ? "HAIKU" : "SONNET")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(viewModel.forceHaikuMode ? .orange : Color(white: 0.5))
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(Color(white: 0.12).clipShape(Capsule()))
+                    }
+                    Button {
+                        switch viewModel.debugTier {
+                        case .free: viewModel.debugTier = .core
+                        case .core: viewModel.debugTier = .pro
+                        case .pro:  viewModel.debugTier = .free
+                        }
+                    } label: {
+                        Text(tierLabel)
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(tierColor)
                             .padding(.horizontal, 10).padding(.vertical, 5)
                             .background(Color(white: 0.12).clipShape(Capsule()))
                     }
@@ -170,7 +192,15 @@ Button {
                     .padding(.bottom, 60)
             } else {
                 VStack(spacing: 12) {
-                    Button(action: onTap) {
+                    Button(action: {
+                        if viewModel.thinkLimitReached {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                viewModel.appState = .paywallRequired
+                            }
+                        } else {
+                            onTap()
+                        }
+                    }) {
                         Text("Think")
                             .font(.custom("HelveticaNeue", size: 17))
                             .foregroundColor(.black)
@@ -185,6 +215,14 @@ Button {
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundColor(Color(white: 0.25))
                         .tracking(2)
+
+                    #if !DEBUG
+                    if viewModel.currentTier == .free && viewModel.thinksUsed < Constants.maxFreeThinks {
+                        Text("\(viewModel.thinksRemaining) free thinks remaining")
+                            .font(.system(size: 12, weight: .regular))
+                            .foregroundColor(Color(white: 0.3))
+                    }
+                    #endif
                 }
                 .padding(.horizontal, 28)
                 .padding(.bottom, 56)
@@ -230,6 +268,24 @@ Button {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    #if DEBUG
+    private var tierLabel: String {
+        switch viewModel.debugTier {
+        case .free: return "FREE"
+        case .core: return "CORE"
+        case .pro:  return "PRO"
+        }
+    }
+
+    private var tierColor: Color {
+        switch viewModel.debugTier {
+        case .free: return Color(white: 0.5)
+        case .core: return Color.blue
+        case .pro:  return Color.green
+        }
+    }
+    #endif
 }
 
 // MARK: - Processing indicator

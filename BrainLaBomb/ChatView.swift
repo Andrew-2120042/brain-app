@@ -350,6 +350,7 @@ struct ChatView: View {
         inputText = ""
         messages.append(ChatBubble(content: text, isUser: true, isContextCard: false))
         onMessagesUpdated(messages)
+        viewModel.incrementMonthlyChatCount()
         isLoading = true
 
         Task {
@@ -409,7 +410,7 @@ struct ChatView: View {
         }
 
         let body: [String: Any] = [
-            "model": Constants.model,
+            "model": viewModel.chatModelForCurrentTier,
             "max_tokens": 300,
             "system": systemPrompt,
             "messages": apiMessages

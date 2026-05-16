@@ -5,6 +5,15 @@ enum DecisionMode: String, Codable {
     case decision = "DECISION"
     case direction = "DIRECTION"
     case emotional = "EMOTIONAL"
+
+    // Case-insensitive decode so "Emotional" / "emotional" / "EMOTIONAL" all work.
+    // Falls back to .emotional rather than throwing — keeps the flow alive if the
+    // model returns something unexpected here.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        let normalized = raw.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
+        self = DecisionMode(rawValue: normalized) ?? .emotional
+    }
 }
 
 // MARK: - First Pass
@@ -47,6 +56,7 @@ struct DecisionReport: Codable {
     let ambientQuestion: String
     let whatYoureNotSaying: String
     let whatUsuallyHelps: String
+    let historyInsight: String
     // legacy display fields — not returned by the new API, filled with defaults
     let majorityLabel: String
     let topic: String
@@ -61,6 +71,7 @@ struct DecisionResult: Codable, Identifiable {
     let mode: DecisionMode
     let archetype: DecisionArchetype
     let report: DecisionReport
+    var modelUsed: String = "sonnet"
 
     // Legacy computed accessors used by CardBackView / StoriesView
     var why: [String]       { report.whyPoints }
@@ -70,23 +81,25 @@ struct DecisionResult: Codable, Identifiable {
     // MARK: Flat-JSON init (API response has all fields at the root level)
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        verdict         = try c.decode(String.self,       forKey: .verdict)
-        confidence      = try c.decode(Int.self,          forKey: .confidence)
-        simulationCount = try c.decode(Int.self,          forKey: .simulationCount)
-        mode            = try c.decode(DecisionMode.self, forKey: .mode)
+        verdict         = (try? c.decode(String.self,       forKey: .verdict))       ?? "unable to simulate right now"
+        confidence      = (try? c.decode(Int.self,          forKey: .confidence))     ?? 70
+        simulationCount = (try? c.decode(Int.self,          forKey: .simulationCount)) ?? 1000
+        mode            = (try? c.decode(DecisionMode.self, forKey: .mode))           ?? .decision
 
-        let reasoningStr    = try c.decode(String.self,     forKey: .reasoning)
-        let whyPoints       = try c.decode([String].self,   forKey: .whyPoints)
-        let tradeoffs       = try c.decode([String].self,   forKey: .tradeoffs)
-        let majorityOutcomes = try c.decode([OutcomeRow].self, forKey: .majorityOutcomes)
-        let minorityOutcomes = try c.decode([OutcomeRow].self, forKey: .minorityOutcomes)
-        let patternNote     = try c.decode(String.self,     forKey: .patternNote)
-        let needsAmbQ       = try c.decode(Bool.self,       forKey: .needsAmbientQuestion)
-        let ambQ            = try c.decode(String.self,     forKey: .ambientQuestion)
+        let reasoningStr     = (try? c.decode(String.self,       forKey: .reasoning))       ?? ""
+        let whyPoints        = (try? c.decode([String].self,     forKey: .whyPoints))       ?? []
+        let tradeoffs        = (try? c.decode([String].self,     forKey: .tradeoffs))       ?? []
+        let majorityOutcomes = (try? c.decode([OutcomeRow].self, forKey: .majorityOutcomes)) ?? []
+        let minorityOutcomes = (try? c.decode([OutcomeRow].self, forKey: .minorityOutcomes)) ?? []
+        let patternNote      = (try? c.decode(String.self,       forKey: .patternNote))      ?? ""
+        let needsAmbQ       = (try? c.decode(Bool.self,   forKey: .needsAmbientQuestion)) ?? false
+        let ambQ            = (try? c.decode(String.self, forKey: .ambientQuestion))      ?? ""
         let whatYoureNotSaying = (try? c.decode(String.self, forKey: .whatYoureNotSaying)) ?? ""
         let whatUsuallyHelps   = (try? c.decode(String.self, forKey: .whatUsuallyHelps))   ?? ""
+        let historyInsight     = (try? c.decode(String.self, forKey: .historyInsight))      ?? ""
         archetype = (try? c.decode(DecisionArchetype.self, forKey: .archetype))
             ?? DecisionArchetype(name: "The Thinker", description: "you came here for a reason.", percentage: 21)
+        modelUsed = (try? c.decode(String.self, forKey: .modelUsed)) ?? "sonnet"
 
         report = DecisionReport(
             reasoning:            [reasoningStr],
@@ -99,6 +112,7 @@ struct DecisionResult: Codable, Identifiable {
             ambientQuestion:      ambQ,
             whatYoureNotSaying:   whatYoureNotSaying,
             whatUsuallyHelps:     whatUsuallyHelps,
+            historyInsight:       historyInsight,
             majorityLabel:        "made that call",
             topic:                "decisions like this"
         )
@@ -120,7 +134,9 @@ struct DecisionResult: Codable, Identifiable {
         try c.encode(report.ambientQuestion,        forKey: .ambientQuestion)
         try c.encode(report.whatYoureNotSaying,     forKey: .whatYoureNotSaying)
         try c.encode(report.whatUsuallyHelps,       forKey: .whatUsuallyHelps)
+        try c.encode(report.historyInsight,         forKey: .historyInsight)
         try c.encode(archetype,                     forKey: .archetype)
+        try c.encode(modelUsed,                     forKey: .modelUsed)
     }
 
     enum CodingKeys: String, CodingKey {
@@ -128,8 +144,8 @@ struct DecisionResult: Codable, Identifiable {
         case reasoning, whyPoints, tradeoffs
         case majorityOutcomes, minorityOutcomes
         case patternNote, needsAmbientQuestion, ambientQuestion
-        case whatYoureNotSaying, whatUsuallyHelps
-        case archetype
+        case whatYoureNotSaying, whatUsuallyHelps, historyInsight
+        case archetype, modelUsed
     }
 }
 
@@ -214,6 +230,7 @@ extension DecisionResult {
           "whatUsuallyHelps": "Most people in this spot need to stop performing okay before they can actually get there. Give yourself one honest conversation — with yourself first, not her.",
           "needsAmbientQuestion": false,
           "ambientQuestion": "",
+          "historyInsight": "Every think you've done involves someone else's expectations sitting inside your decision. Your parents. Your girlfriend. Your manager. You frame your choices around what they need first and what you need second. That pattern is consistent enough now that it's worth naming.",
           "archetype": {
             "name": "The Overthinker",
             "description": "you see every angle. landing is the hard part.",
