@@ -6,8 +6,20 @@ struct HistoryPanelView: View {
     let onChatMessagesUpdated: (UUID, [ChatBubble]) -> Void
 
     @AppStorage("debug_useMockData") private var useMockData: Bool = true
-    @State private var thinks: [Think] = []
     @State private var selectedThink: Think? = nil
+
+    private var displayThinks: [Think] {
+        let history = Array(viewModel.thinkHistory.reversed())
+        #if DEBUG
+        if useMockData && history.isEmpty {
+            return [
+                Think(originalQuestion: "should I quit my job to freelance full time?", result: .mock),
+                Think(originalQuestion: "is it worth moving to a new city for this opportunity?", result: .mock)
+            ]
+        }
+        #endif
+        return history
+    }
 
     private let dateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -25,14 +37,14 @@ struct HistoryPanelView: View {
                     .fill(Color(white: 0.1))
                     .frame(height: 0.5)
 
-                if thinks.isEmpty {
+                if displayThinks.isEmpty {
                     emptyState
                 } else {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 0) {
-                            ForEach(thinks) { think in
+                            ForEach(displayThinks) { think in
                                 Button {
-                                    selectedThink = thinks.first(where: { $0.id == think.id }) ?? think
+                                    selectedThink = think
                                 } label: {
                                     thinkRow(think)
                                 }
@@ -46,10 +58,6 @@ struct HistoryPanelView: View {
                 }
             }
         }
-        .onAppear { loadThinks() }
-        .onChange(of: isPresented) { newValue in
-            if newValue { loadThinks() }
-        }
         .fullScreenCover(item: $selectedThink) { think in
             DecisionCardView(
                 result: think.result,
@@ -59,9 +67,6 @@ struct HistoryPanelView: View {
                 thinkID: think.id,
                 existingChatMessages: think.chatMessages,
                 onChatMessagesUpdated: { updatedMessages in
-                    if let idx = thinks.firstIndex(where: { $0.id == think.id }) {
-                        thinks[idx].chatMessages = updatedMessages
-                    }
                     onChatMessagesUpdated(think.id, updatedMessages)
                 }
             )
@@ -161,19 +166,4 @@ struct HistoryPanelView: View {
         .contentShape(Rectangle())
     }
 
-    // MARK: - Load
-
-    private func loadThinks() {
-        if let data = UserDefaults.standard.data(forKey: Constants.thinkHistoryKey),
-           let decoded = try? JSONDecoder().decode([Think].self, from: data) {
-            thinks = decoded.reversed()
-        }
-
-        if useMockData && thinks.isEmpty {
-            thinks = [
-                Think(originalQuestion: "should I quit my job to freelance full time?", result: .mock),
-                Think(originalQuestion: "is it worth moving to a new city for this opportunity?", result: .mock)
-            ]
-        }
-    }
 }

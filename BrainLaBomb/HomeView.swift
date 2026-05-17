@@ -162,6 +162,16 @@ struct HomeView: View {
                             .padding(.horizontal, 10).padding(.vertical, 5)
                             .background(Color(white: 0.12).clipShape(Capsule()))
                     }
+                    Button {
+                        viewModel.originalQuestion = "debug boundary"
+                        viewModel.appState = .result(DecisionResult.boundary)
+                    } label: {
+                        Text("BDRY")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(.red)
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(Color(white: 0.12).clipShape(Capsule()))
+                    }
                     #endif
                 }
                 .padding(.top, 0)

@@ -103,11 +103,15 @@ struct StoriesView: View {
             return "Every think you've done involves someone else's expectations sitting inside your decision. Your parents. Your girlfriend. Your manager. You frame your choices around what they need first and what you need second. That pattern is consistent enough now that it's worth naming. The people in your life aren't asking you to shrink — you are doing that preemptively, anticipating their needs before they even express them. That is not selflessness. That is a habit built from a time when it felt necessary. It may not be necessary anymore. The question is whether you are ready to find out what happens when you stop doing it."
         }
         #endif
-        return result.report.historyInsight
+        return viewModel.patternData?.historyInsight ?? ""
     }
 
     private var shouldShowHistoryCard: Bool {
-        !result.report.historyInsight.isEmpty && viewModel.thinkCountForPattern >= 5
+        #if DEBUG
+        if debugForceDoubleHistory { return true }
+        #endif
+        guard let patternData = viewModel.patternData else { return false }
+        return !patternData.historyInsight.isEmpty
     }
 
     private var historyAttrs: [NSAttributedString.Key: Any] {

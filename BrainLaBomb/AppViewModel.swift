@@ -171,16 +171,9 @@ class AppViewModel: ObservableObject {
     var shouldUseHaiku: Bool {
         #if DEBUG
         return forceHaikuMode
-        #endif
-        // Full Haiku for all tiers.
-        // To revert to hybrid: update shouldUseHaiku and pass useHaiku: shouldUseHaiku to firstPass/secondPass.
+        #else
         return true
-        // Previous hybrid logic:
-        // switch currentTier {
-        // case .free: return false
-        // case .core: return coreThinksUsed >= coreSonnetLimit
-        // case .pro:  return monthlyThinkCount > 200
-        // }
+        #endif
     }
 
     #if DEBUG
@@ -244,7 +237,6 @@ class AppViewModel: ObservableObject {
             let result = try await APIClient.shared.secondPass(
                 question: originalQuestion,
                 followUpAnswer: answer,
-                thinkHistory: thinkHistory,
                 useHaiku: shouldUseHaiku
             )
 
@@ -322,7 +314,8 @@ class AppViewModel: ObservableObject {
                 insight: "you don't think better at night. you think more honestly."
             ),
             generatedAt: Date(),
-            thinkCount: 7
+            thinkCount: 7,
+            historyInsight: "Every think you've done involves someone else's expectations sitting inside your decision. Your parents. Your girlfriend. Your manager. You frame your choices around what they need first and what you need second. That pattern is consistent enough now that it's worth naming."
         )
     }
     #endif

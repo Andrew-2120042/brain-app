@@ -68,7 +68,7 @@ struct APIClient {
     }
 
     // MARK: - Call 2: Full Decision
-    func secondPass(question: String, followUpAnswer: String = "", thinkHistory: [Think] = [], useHaiku: Bool = false) async throws -> DecisionResult {
+    func secondPass(question: String, followUpAnswer: String = "", useHaiku: Bool = false) async throws -> DecisionResult {
         if Constants.useMockData {
             try await Task.sleep(nanoseconds: 1_500_000_000)
             return .mock
@@ -77,11 +77,6 @@ struct APIClient {
         var userContent = question
         if !followUpAnswer.isEmpty {
             userContent += "\n\nAdditional context: \(followUpAnswer)"
-        }
-
-        if !thinkHistory.isEmpty {
-            let historyContext = buildHistoryContext(from: thinkHistory)
-            userContent += "\n\nThis person's recent history:\n\(historyContext)"
         }
 
         let messages: [[String: Any]] = [
@@ -157,7 +152,7 @@ struct APIClient {
 
         let body: [String: Any] = [
             "model": "claude-haiku-4-5-20251001",
-            "max_tokens": 400,
+            "max_tokens": 700,
             "system": Constants.patternAnalysisPrompt,
             "messages": [["role": "user", "content": userMessage]]
         ]
@@ -170,12 +165,18 @@ struct APIClient {
         struct PatternResponse: Codable {
             let needsMoreData: Bool
             let patternIdentity: PatternIdentity?
+            let historyInsight: String?
         }
 
         do {
             let response = try JSONDecoder().decode(PatternResponse.self, from: data)
             guard !response.needsMoreData, let identity = response.patternIdentity else { return nil }
-            return PatternData(identity: identity, generatedAt: Date(), thinkCount: thinkHistory.count)
+            return PatternData(
+                identity: identity,
+                generatedAt: Date(),
+                thinkCount: thinkHistory.count,
+                historyInsight: response.historyInsight ?? ""
+            )
         } catch {
             #if DEBUG
             print("Pattern analysis decode failed: \(error.localizedDescription)")
@@ -308,7 +309,6 @@ struct APIClient {
             "ambientQuestion": "",
             "whatYoureNotSaying": "",
             "whatUsuallyHelps": "",
-            "historyInsight": "",
             "archetype": [
                 "name": "The Thinker",
                 "description": "you came here for a reason.",

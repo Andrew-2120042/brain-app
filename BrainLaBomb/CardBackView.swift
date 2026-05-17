@@ -46,6 +46,10 @@ struct CardBackView: View {
         self._chatMessages = State(initialValue: existingChatMessages)
     }
 
+    private var isBoundaryResponse: Bool {
+        result.confidence == 0 && (result.verdict.contains("can't help") || result.verdict.contains("isn't something"))
+    }
+
     private var verdictIsTruncated: Bool {
         #if DEBUG
         if debugForceVerdict { return true }
@@ -70,169 +74,183 @@ struct CardBackView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            // ── Full verdict (only when front text is cut off) ────
-            if verdictIsTruncated {
-                Text(result.verdict.lowercased())
-                    .font(.custom("Poppins-Regular", size: 18))
-                    .foregroundColor(.white)
-                    .lineSpacing(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 18)
-                    .padding(.top, 18)
-                    .padding(.bottom, 14)
-            }
-
-            // ── Scrollable Why + Trade offs ───────────────────────
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 0) {
-
-                    // Why
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Why")
-                            .font(.custom("Poppins-Regular", size: 24))
-                            .foregroundColor(.white)
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(result.why, id: \.self) { point in
-                                HStack(alignment: .top, spacing: 8) {
-                                    Text("•")
-                                        .font(.custom("Poppins-Regular", size: 14))
-                                        .foregroundColor(Color(white: 0.5))
-                                    Text(point)
-                                        .font(.custom("Poppins-Regular", size: 14))
-                                        .foregroundColor(Color(white: 0.5))
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 18)
-                    .padding(.top, verdictIsTruncated ? 0 : 22)
-
-                    Spacer().frame(height: 28)
-
-                    // Trade offs
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Trade offs")
-                            .font(.custom("Poppins-Regular", size: 24))
-                            .foregroundColor(.white)
-
-                        VStack(alignment: .leading, spacing: 6) {
-                            ForEach(result.tradeoffs, id: \.self) { point in
-                                HStack(alignment: .top, spacing: 8) {
-                                    Text("•")
-                                        .font(.custom("Poppins-Regular", size: 14))
-                                        .foregroundColor(Color(white: 0.5))
-                                    Text(point)
-                                        .font(.custom("Poppins-Regular", size: 14))
-                                        .foregroundColor(Color(white: 0.5))
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 18)
-                    .padding(.bottom, 16)
+            if isBoundaryResponse {
+                // ── Boundary card back — human message only ───────
+                Spacer()
+                Text("this one's worth talking\nto someone about.")
+                    .font(.custom("Poppins-Regular", size: 20))
+                    .foregroundColor(Color(white: 0.5))
+                    .lineSpacing(6)
+                    .multilineTextAlignment(.leading)
+                    .padding(.horizontal, 28)
+                Spacer()
+                Spacer()
+            } else {
+                // ── Full verdict (only when front text is cut off) ─
+                if verdictIsTruncated {
+                    Text(result.verdict.lowercased())
+                        .font(.custom("Poppins-Regular", size: 18))
+                        .foregroundColor(.white)
+                        .lineSpacing(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 18)
+                        .padding(.bottom, 14)
                 }
-            }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 1)
-                    .onChanged { _ in onScrollingChanged?(true) }
-                    .onEnded { _ in
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                            onScrollingChanged?(false)
-                        }
-                    }
-            )
 
-            // ── Fixed buttons ─────────────────────────────────────
-            VStack(spacing: 8) {
-                #if DEBUG
-                Button { debugForceVerdict.toggle() } label: {
-                    Text("VERB")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundColor(debugForceVerdict ? Color.black : Color(white: 0.55))
-                        .frame(width: 50, height: 28)
-                        .background(debugForceVerdict ? Color.white : Color(white: 0.14))
+                // ── Scrollable Why + Trade offs ───────────────────
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 0) {
+
+                        // Why
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Why")
+                                .font(.custom("Poppins-Regular", size: 24))
+                                .foregroundColor(.white)
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(result.why, id: \.self) { point in
+                                    HStack(alignment: .top, spacing: 8) {
+                                        Text("•")
+                                            .font(.custom("Poppins-Regular", size: 14))
+                                            .foregroundColor(Color(white: 0.5))
+                                        Text(point)
+                                            .font(.custom("Poppins-Regular", size: 14))
+                                            .foregroundColor(Color(white: 0.5))
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.top, verdictIsTruncated ? 0 : 22)
+
+                        Spacer().frame(height: 28)
+
+                        // Trade offs
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Trade offs")
+                                .font(.custom("Poppins-Regular", size: 24))
+                                .foregroundColor(.white)
+
+                            VStack(alignment: .leading, spacing: 6) {
+                                ForEach(result.tradeoffs, id: \.self) { point in
+                                    HStack(alignment: .top, spacing: 8) {
+                                        Text("•")
+                                            .font(.custom("Poppins-Regular", size: 14))
+                                            .foregroundColor(Color(white: 0.5))
+                                        Text(point)
+                                            .font(.custom("Poppins-Regular", size: 14))
+                                            .foregroundColor(Color(white: 0.5))
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 16)
+                    }
+                }
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 1)
+                        .onChanged { _ in onScrollingChanged?(true) }
+                        .onEnded { _ in
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                onScrollingChanged?(false)
+                            }
+                        }
+                )
+
+                // ── Fixed buttons ─────────────────────────────────
+                VStack(spacing: 8) {
+                    #if DEBUG
+                    Button { debugForceVerdict.toggle() } label: {
+                        Text("VERB")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundColor(debugForceVerdict ? Color.black : Color(white: 0.55))
+                            .frame(width: 50, height: 28)
+                            .background(debugForceVerdict ? Color.white : Color(white: 0.14))
+                            .clipShape(Capsule())
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    #endif
+
+                    Button { if canChat { showChat = true } else { showPaywall = true } } label: {
+                        HStack {
+                            Text("chat about this")
+                                .font(.custom("Poppins-Regular", size: 15))
+                                .foregroundColor(canChat ? .white : Color(white: 0.4))
+                            Spacer()
+                            if !canChat {
+                                Image(systemName: "lock.fill")
+                                    .font(.system(size: 12))
+                                    .foregroundColor(Color(white: 0.4))
+                            }
+                        }
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 16)
+                        .background(Color(red: 0.039, green: 0.039, blue: 0.039))
                         .clipShape(Capsule())
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                #endif
+                        .overlay(Capsule().stroke(canChat ? Color.white : Color(white: 0.25), lineWidth: 1))
+                    }
+                    .buttonStyle(PlainButtonStyle())
 
-                Button { if canChat { showChat = true } else { showPaywall = true } } label: {
-                    HStack {
-                        Text("chat about this")
-                            .font(.custom("Poppins-Regular", size: 15))
-                            .foregroundColor(canChat ? .white : Color(white: 0.4))
-                        Spacer()
-                        if !canChat {
-                            Image(systemName: "lock.fill")
-                                .font(.system(size: 12))
-                                .foregroundColor(Color(white: 0.4))
+                    Button { showStories = true } label: {
+                        HStack {
+                            Text("view full report")
+                                .font(.custom("Poppins-Regular", size: 15))
+                                .foregroundColor(.black)
+                            Spacer()
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.black)
                         }
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 16)
+                        .background(Color.white)
+                        .clipShape(Capsule())
                     }
-                    .padding(.horizontal, 22)
-                    .padding(.vertical, 16)
-                    .background(Color(red: 0.039, green: 0.039, blue: 0.039))
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(canChat ? Color.white : Color(white: 0.25), lineWidth: 1))
+                    .buttonStyle(PlainButtonStyle())
                 }
-                .buttonStyle(PlainButtonStyle())
-
-                Button { showStories = true } label: {
-                    HStack {
-                        Text("view full report")
-                            .font(.custom("Poppins-Regular", size: 15))
-                            .foregroundColor(.black)
-                        Spacer()
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(.black)
-                    }
-                    .padding(.horizontal, 22)
-                    .padding(.vertical, 16)
-                    .background(Color.white)
-                    .clipShape(Capsule())
-                }
-                .buttonStyle(PlainButtonStyle())
-            }
-            .padding(.horizontal, 18)
-            .padding(.bottom, 20)
-            .fullScreenCover(isPresented: $showStories) {
-                StoriesView(
-                    result: result,
-                    viewModel: viewModel,
-                    onContinueInChat: {
-                        showStories = false
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            showChat = true
-                        }
-                    },
-                    onNewThink: {
-                        showStories = false
-                        onNewThink?()
-                    }
-                )
-            }
-            .sheet(isPresented: $showPaywall) {
-                PaywallView()
-            }
-            .fullScreenCover(isPresented: $showChat) {
-                ChatView(
-                    originalQuestion: originalQuestion,
-                    decisionResult: result,
-                    viewModel: viewModel,
-                    thinkID: thinkID,
-                    existingMessages: chatMessages,
-                    onMessagesUpdated: { updated in
-                        chatMessages = updated
-                        onChatMessagesUpdated(updated)
-                    },
-                    onNewThink: onNewThink
-                )
+                .padding(.horizontal, 18)
+                .padding(.bottom, 20)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.black)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+        .fullScreenCover(isPresented: $showStories) {
+            StoriesView(
+                result: result,
+                viewModel: viewModel,
+                onContinueInChat: {
+                    showStories = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showChat = true
+                    }
+                },
+                onNewThink: {
+                    showStories = false
+                    onNewThink?()
+                }
+            )
+        }
+        .sheet(isPresented: $showPaywall) {
+            PaywallView()
+        }
+        .fullScreenCover(isPresented: $showChat) {
+            ChatView(
+                originalQuestion: originalQuestion,
+                decisionResult: result,
+                viewModel: viewModel,
+                thinkID: thinkID,
+                existingMessages: chatMessages,
+                onMessagesUpdated: { updated in
+                    chatMessages = updated
+                    onChatMessagesUpdated(updated)
+                },
+                onNewThink: onNewThink
+            )
+        }
     }
 }

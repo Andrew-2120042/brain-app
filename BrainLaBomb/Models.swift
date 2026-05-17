@@ -56,7 +56,6 @@ struct DecisionReport: Codable {
     let ambientQuestion: String
     let whatYoureNotSaying: String
     let whatUsuallyHelps: String
-    let historyInsight: String
     // legacy display fields — not returned by the new API, filled with defaults
     let majorityLabel: String
     let topic: String
@@ -96,7 +95,6 @@ struct DecisionResult: Codable, Identifiable {
         let ambQ            = (try? c.decode(String.self, forKey: .ambientQuestion))      ?? ""
         let whatYoureNotSaying = (try? c.decode(String.self, forKey: .whatYoureNotSaying)) ?? ""
         let whatUsuallyHelps   = (try? c.decode(String.self, forKey: .whatUsuallyHelps))   ?? ""
-        let historyInsight     = (try? c.decode(String.self, forKey: .historyInsight))      ?? ""
         archetype = (try? c.decode(DecisionArchetype.self, forKey: .archetype))
             ?? DecisionArchetype(name: "The Thinker", description: "you came here for a reason.", percentage: 21)
         modelUsed = (try? c.decode(String.self, forKey: .modelUsed)) ?? "sonnet"
@@ -112,7 +110,6 @@ struct DecisionResult: Codable, Identifiable {
             ambientQuestion:      ambQ,
             whatYoureNotSaying:   whatYoureNotSaying,
             whatUsuallyHelps:     whatUsuallyHelps,
-            historyInsight:       historyInsight,
             majorityLabel:        "made that call",
             topic:                "decisions like this"
         )
@@ -134,7 +131,6 @@ struct DecisionResult: Codable, Identifiable {
         try c.encode(report.ambientQuestion,        forKey: .ambientQuestion)
         try c.encode(report.whatYoureNotSaying,     forKey: .whatYoureNotSaying)
         try c.encode(report.whatUsuallyHelps,       forKey: .whatUsuallyHelps)
-        try c.encode(report.historyInsight,         forKey: .historyInsight)
         try c.encode(archetype,                     forKey: .archetype)
         try c.encode(modelUsed,                     forKey: .modelUsed)
     }
@@ -144,7 +140,7 @@ struct DecisionResult: Codable, Identifiable {
         case reasoning, whyPoints, tradeoffs
         case majorityOutcomes, minorityOutcomes
         case patternNote, needsAmbientQuestion, ambientQuestion
-        case whatYoureNotSaying, whatUsuallyHelps, historyInsight
+        case whatYoureNotSaying, whatUsuallyHelps
         case archetype, modelUsed
     }
 }
@@ -161,6 +157,22 @@ struct PatternData: Codable {
     let identity: PatternIdentity
     let generatedAt: Date
     let thinkCount: Int
+    let historyInsight: String
+
+    init(identity: PatternIdentity, generatedAt: Date, thinkCount: Int, historyInsight: String = "") {
+        self.identity = identity
+        self.generatedAt = generatedAt
+        self.thinkCount = thinkCount
+        self.historyInsight = historyInsight
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        identity = try container.decode(PatternIdentity.self, forKey: .identity)
+        generatedAt = try container.decode(Date.self, forKey: .generatedAt)
+        thinkCount = try container.decode(Int.self, forKey: .thinkCount)
+        historyInsight = (try? container.decode(String.self, forKey: .historyInsight)) ?? ""
+    }
 }
 
 // MARK: - Think (History)
@@ -204,6 +216,7 @@ struct ChatMessage: Codable, Identifiable {
 // MARK: - Mock Data
 extension DecisionResult {
     static let mock = DecisionResult.mockBuild()
+    static let boundary = DecisionResult.boundaryBuild()
 
     private static func mockBuild() -> DecisionResult {
         let json = """
@@ -230,11 +243,38 @@ extension DecisionResult {
           "whatUsuallyHelps": "Most people in this spot need to stop performing okay before they can actually get there. Give yourself one honest conversation — with yourself first, not her.",
           "needsAmbientQuestion": false,
           "ambientQuestion": "",
-          "historyInsight": "Every think you've done involves someone else's expectations sitting inside your decision. Your parents. Your girlfriend. Your manager. You frame your choices around what they need first and what you need second. That pattern is consistent enough now that it's worth naming.",
           "archetype": {
             "name": "The Overthinker",
             "description": "you see every angle. landing is the hard part.",
             "percentage": 24
+          }
+        }
+        """
+        let data = json.data(using: .utf8)!
+        return try! JSONDecoder().decode(DecisionResult.self, from: data)
+    }
+
+    private static func boundaryBuild() -> DecisionResult {
+        let json = """
+        {
+          "verdict": "this isn't something I can help with.",
+          "confidence": 0,
+          "simulationCount": 0,
+          "mode": "EMOTIONAL",
+          "reasoning": "Please talk to someone you trust right now.",
+          "whyPoints": [],
+          "tradeoffs": [],
+          "majorityOutcomes": [],
+          "minorityOutcomes": [],
+          "patternNote": "",
+          "whatYoureNotSaying": "",
+          "whatUsuallyHelps": "",
+          "needsAmbientQuestion": false,
+          "ambientQuestion": "",
+          "archetype": {
+            "name": "The Thinker",
+            "description": "you came here for a reason.",
+            "percentage": 21
           }
         }
         """
