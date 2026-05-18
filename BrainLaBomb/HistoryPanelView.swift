@@ -5,7 +5,7 @@ struct HistoryPanelView: View {
     @ObservedObject var viewModel: AppViewModel
     let onChatMessagesUpdated: (UUID, [ChatBubble]) -> Void
 
-    @AppStorage("debug_useMockData") private var useMockData: Bool = true
+    @AppStorage("debug_useMockData") private var useMockData: Bool = false
     @State private var selectedThink: Think? = nil
 
     private var displayThinks: [Think] {

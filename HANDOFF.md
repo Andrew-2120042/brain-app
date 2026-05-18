@@ -5,7 +5,7 @@
 **Working directory:** `/Users/andrewwilson/my projects/brainlabomb`  
 **Xcode project:** `BrainLaBomb.xcodeproj` (generated via xcodegen from `project.yml`)  
 **Git remote:** `https://github.com/Andrew-2120042/brain-app.git`  
-**Last known git push:** pushed after chat persistence was implemented (around line 5889 in transcript). A second push was done earlier too. The user said "from now don't push anything until I tell you to push again" — respect this.
+**Last known git push:** commit `cd88e54` — history isolation refactor, boundary card, HistoryPanelView reactive fix, and supporting changes. Do NOT push again until explicitly told to.
 
 ---
 
@@ -30,9 +30,9 @@ History panel shows all past thinks, tapping one reopens the card. Pattern ident
 | `Constants.swift` | All API config, prompts (`firstPassSystemPrompt`, `secondPassSystemPrompt`, `anchoringRules`, `haikuSystemPrompt`, `patternAnalysisPrompt`), app constants |
 | `Models.swift` | All data models: `DecisionResult`, `DecisionReport`, `DecisionArchetype`, `OutcomeRow`, `Think`, `ChatBubble`, `PatternIdentity`, `PatternData`, mock data |
 | `AppViewModel.swift` | Central state machine. `AppState` enum drives the whole app. Handles tier logic, think counters, history persistence, pattern analysis trigger |
-| `APIClient.swift` | Three API calls: `firstPass`, `secondPass`, `analyzePattern`. Uses `Constants.baseURL` + `Constants.apiKey`. No streaming — full response. |
+| `APIClient.swift` | Three API calls: `firstPass`, `secondPass`, `analyzePattern`. Both `firstPass` and `secondPass` have a silent Sonnet fallback when Haiku returns non-JSON (see Phase 31). No streaming — full response. |
 | `ContentView.swift` | Root switch on `viewModel.appState` — routes to correct screen. Also hosts onboarding fullScreenCover. |
-| `HomeView.swift` | Home screen with two layout versions (v1 = full button, v2 = underline text). Debug bar at top: mock/live toggle, v1/v2 toggle, tier toggle, haiku toggle, notif debug. History panel slides in from left. Settings sheet. |
+| `HomeView.swift` | Home screen with two layout versions (v1 = full button, v2 = underline text). Debug bar at top: mock/live toggle, v1/v2 toggle, tier toggle, haiku toggle, notif debug, BDRY button, CORRUPT button. History panel slides in from left. Settings sheet. |
 | `DecisionCardView.swift` | The flip card screen. Has gyroscope tilt, drag-to-rotate, tap-to-flip, spring arrival animation. Front = `DecisionCard`, Back = `CardBackView`. Also has layout switcher debug bar (A-E). |
 | `DecisionCard.swift` | Front face of the card. 5 layout variants (A-E). Renders verdict, confidence, simulation count. |
 | `CardBackView.swift` | Back face of card. Renders Why + Trade offs (scrollable). Two action buttons: "chat about this" (Pro only, lock icon for free) and "view full report". Has `verdictIsTruncated` logic — shows full verdict at top of back only if front text was cut off. |
@@ -350,10 +350,58 @@ Replaced the old REASONING block in `haikuSystemPrompt` with a new framing: hist
 - Explicit "History has its place — historyInsight and patternNote. Those fields exist specifically so reasoning doesn't have to carry that weight."
 - Only `haikuSystemPrompt` changed. `anchoringRules` (used for Sonnet) has its own REASONING block and was not touched.
 
-### Phase 30 — Paywall Screen Safe Area Fix
+### Phase 30 — History Isolation + Boundary Card + HistoryPanelView Reactivity
+(completed in previous session, last push was `cd88e54`)
+
+**History isolation:** `secondPass` no longer receives `thinkHistory`. All history work moved to `analyzePattern` (Call 3). `PatternData` now carries both `patternIdentity` and `historyInsight`. `historyInsight` story card now reads from `viewModel.patternData?.historyInsight` (not `result.report.historyInsight`).
+
+**Boundary card back:** `CardBackView` detects boundary responses via `isBoundaryResponse` (`confidence == 0 && verdict contains "can't help" or "isn't something"`). Boundary back shows "this one's worth talking to someone about." with no buttons. `.frame(maxWidth: .infinity, maxHeight: .infinity)` added before `.background` to prevent card shape collapse.
+
+**HistoryPanelView reactivity:** Was using `@State private var thinks` loaded once from UserDefaults — clear history had no effect. Replaced with `displayThinks` computed property reading `viewModel.thinkHistory.reversed()` directly. Clear now works instantly.
+
+**BDRY debug button:** In HomeView's `#if DEBUG` block, sets `viewModel.appState = .result(DecisionResult.boundary)` for testing boundary card.
+
+**`shouldUseHaiku` fix:** Was `#if DEBUG return forceHaikuMode #endif return true` — compiler treated the second return as unreachable in DEBUG builds. Fixed to `#if DEBUG return forceHaikuMode #else return true #endif`.
+
+**Info.plist orientations:** Added all four `UISupportedInterfaceOrientations` to satisfy App Store validation.
+
+**firstPassSystemPrompt life change clarification:** Added `CRITICAL` block distinguishing crisis signals (no future imagined) from life change signals (future imagined, even vaguely). "I want to quit everything" → simulate as DIRECTION.
+
+**LANGUAGE LEVEL recalibration (Haiku only):** Replaced with "smart friend who thinks deeply, aim between medium and intermediate" framing. Includes wrong/right examples showing the target register.
+
+### Phase 31 — Paywall Screen Safe Area Fix
+(what was previously called Phase 30 in earlier drafts)
 Onboarding screen 8 (`screenPaywall`) was starting with a fixed `Spacer().frame(height: 60)` inside a ZStack where `Color.ignoresSafeArea()` forces full-screen layout. On devices with tall safe areas (Dynamic Island = ~59pt), this left almost no breathing room.
 - Fixed by wrapping the ScrollView in a `GeometryReader` and using `proxy.safeAreaInsets.top + 24` as the top spacer height.
 - Adapts correctly to iPhone SE (no notch), standard notch, and Dynamic Island devices.
+
+### Phase 32 — Sonnet Fallback for Haiku Format Failures
+
+Added silent Sonnet fallback to both `firstPass` and `secondPass` in `APIClient.swift`.
+
+**Trigger condition:** Only fires when `extractJSONDictionary` returns `nil` — meaning Haiku returned something with zero valid JSON anywhere (pure plain text, empty string, completely malformed). Does NOT trigger on: valid JSON with missing fields, valid JSON that fails Codable decode, network errors or timeouts.
+
+**firstPass fallback:** Retries with `Constants.model` (Sonnet). System prompt stays as `firstPassSystemPrompt` — same prompt works for both models. Returns normally if Sonnet succeeds. Throws "Both Haiku and Sonnet returned non-JSON" only if both fail.
+
+**secondPass fallback:** Retries with `Constants.model` AND swaps system prompt to `secondPassSystemPrompt + anchoringRules`. This swap is intentional — Sonnet needs its own prompt, not `haikuSystemPrompt`. `result.modelUsed` is stamped `Constants.model` on fallback → SONNET badge shows in debug.
+
+**Debug flow for testing:**
+- `forceCorrupt: Bool = false` parameter added to both `firstPass` and `secondPass`
+- `AppViewModel.forceNextResponseCorrupt: @Published Bool = false` (DEBUG only)
+- CORRUPT button in HomeView debug bar toggles this flag
+- When ON, Haiku response is replaced with `"This is intentionally corrupted plain text..."` before JSON parsing → fallback fires → Sonnet runs → card shows with SONNET badge
+- Auto-resets to `false` in `runSecondPass` after the think completes (success or error)
+- `#if DEBUG` print warnings appear in console when fallback fires
+
+**Badge behavior:** `DecisionCardView` already checks `result.modelUsed.contains("haiku")` — no change needed. Haiku path stamps `"claude-haiku-4-5-20251001"`, Sonnet fallback stamps `"claude-sonnet-4-20250514"`.
+
+### Phase 33 — Debug Defaults Changed
+
+- `AppViewModel.debugTier` default: `.free` → `.pro` (resets each launch — not persisted)
+- `AppViewModel.forceHaikuMode` default: `false` → `true` (resets each launch — not persisted)
+- `Constants.useMockData` code default: `true` → `false`
+- `HomeView` and `HistoryPanelView` `@AppStorage("debug_useMockData")` default: `true` → `false`
+- Note: mock/live is UserDefaults-persisted. Existing installs keep their stored value. Toggle the MOCK button once in the debug bar to flip to LIVE if you've already launched before.
 
 ---
 
@@ -432,19 +480,20 @@ This file is in `.gitignore` and was NOT pushed.
 - `reasoning` in `DecisionReport` is `[String]` even though the API returns a single string — it's wrapped in `[reasoningStr]` on decode. StoriesView uses `.joined(separator: " ")` to display it.
 - Chat messages are stored in `Think.chatMessages: [ChatBubble]` and persisted in the think history array.
 - Pattern analysis runs automatically every 5th think (`thinkHistory.count % 5 == 0`). No UI indication when it runs.
-- The `historyInsight` story card only renders if `result.report.historyInsight` is non-empty AND `viewModel.thinkCountForPattern >= 5`, making `totalCards` either 5 or 6.
+- The `historyInsight` story card only renders if `viewModel.patternData?.historyInsight` is non-empty (checked in `shouldShowHistoryCard`), making `totalCards` either 5 or 6. In DEBUG, `debugForceDoubleHistory` can force it to show.
+- `firstPass` and `secondPass` both have a silent Sonnet fallback — fires only when `extractJSONDictionary` returns nil. `secondPass` fallback also swaps the system prompt from `haikuSystemPrompt` to `secondPassSystemPrompt + anchoringRules`.
 
 ---
 
 ## Next Steps (What Was Being Worked On)
 
-The session ended after the Phase 30 safe area fix on onboarding screen 8. Everything was committed and pushed.
+The session ended after Phase 33 (debug defaults). Changes are NOT yet pushed — do not push until explicitly told.
 
 The natural next actions are:
 1. Wire RevenueCat for real tier enforcement — paywall "start trial" / "get Core" buttons currently just advance to screen 9 with `TODO: RevenueCat` comments
 2. Build the actual purchase flow in PaywallView (standalone paywall, not just onboarding)
 3. Decide whether to port remaining Sonnet voice sections into Haiku (see "What Sonnet Has That Haiku Is Missing" above)
-4. Fix `mode` field decode to be case-insensitive (risk: "Emotional" vs "EMOTIONAL" crashes decode)
+4. Fix `mode` field decode to be case-insensitive (risk: "Emotional" vs "EMOTIONAL" crashes decode) — `DecisionMode` already handles this via custom `init(from:)` but verify in practice
 5. Fix `resetBrainMemory()` / `clearAllData()` to also clear `monthlyThinkCount` and `lastMonthlyReset`
 6. Add backend proxy for API key before App Store submission
-7. Test onboarding flow end-to-end on a real device (Dynamic Island safe area fix needs physical device verification)
+7. Test Sonnet fallback end-to-end: use CORRUPT button, verify SONNET badge appears, verify CORRUPT auto-resets

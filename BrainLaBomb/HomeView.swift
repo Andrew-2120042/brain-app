@@ -11,7 +11,7 @@ struct HomeView: View {
     @State private var showHistory = false
     @State private var showSettings = false
     @State private var historyDragOffset: CGFloat = 0
-    @AppStorage("debug_useMockData") private var useMockData: Bool = true
+    @AppStorage("debug_useMockData") private var useMockData: Bool = false
 
     private let bgURL  = Bundle.main.url(forResource: "home_bg",  withExtension: "mp4")!
     private let bgURL5 = Bundle.main.url(forResource: "home_bg5", withExtension: "mp4")!
@@ -170,6 +170,16 @@ struct HomeView: View {
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
                             .foregroundColor(.red)
                             .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(Color(white: 0.12).clipShape(Capsule()))
+                    }
+                    Button {
+                        viewModel.forceNextResponseCorrupt.toggle()
+                    } label: {
+                        Text(viewModel.forceNextResponseCorrupt ? "CORRUPT ON" : "CORRUPT")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundColor(viewModel.forceNextResponseCorrupt ? .red : Color(white: 0.5))
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
                             .background(Color(white: 0.12).clipShape(Capsule()))
                     }
                     #endif

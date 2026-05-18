@@ -22,7 +22,7 @@ struct APIClient {
     private init() {}
 
     // MARK: - Call 1: Classification
-    func firstPass(question: String, useHaiku: Bool = false) async throws -> FirstPassResponse {
+    func firstPass(question: String, useHaiku: Bool = false, forceCorrupt: Bool = false) async throws -> FirstPassResponse {
         if Constants.useMockData {
             try await Task.sleep(nanoseconds: 800_000_000)
             return FirstPassResponse(
@@ -47,14 +47,53 @@ struct APIClient {
 
         let responseText = try await makeRequest(body: body)
 
-        // Bulletproof extraction — always pull out a usable JSON object dictionary
-        // regardless of code fences, preamble, or extra text around it.
-        guard let dict = extractJSONDictionary(from: responseText) else {
-            throw APIError.decodingError("Could not find JSON object in response\n\nRaw:\n\(responseText)")
+        #if DEBUG
+        let responseToProcess: String
+        if forceCorrupt {
+            responseToProcess = "This is intentionally corrupted plain text to test the Sonnet fallback mechanism."
+        } else {
+            responseToProcess = responseText
+        }
+        #else
+        let responseToProcess = responseText
+        #endif
+
+        // SONNET FALLBACK LOGIC:
+        // extractJSONDictionary returns nil ONLY when the model returned something with
+        // zero valid JSON anywhere — pure plain text, empty response, completely malformed.
+        // This is NOT triggered by:
+        //   - Valid JSON with missing fields (fault tolerant decoder handles that)
+        //   - Valid JSON that fails Codable decode (handled downstream)
+        //   - Network errors or timeouts (those throw before reaching here)
+        // Sonnet ONLY runs when there is literally no JSON object to extract.
+        guard let dict = extractJSONDictionary(from: responseToProcess) else {
+
+            #if DEBUG
+            print("⚠️ [FALLBACK] firstPass: Haiku returned non-JSON. Triggering Sonnet fallback.")
+            print("⚠️ [FALLBACK] Raw Haiku response: \(responseToProcess)")
+            #endif
+
+            // Build Sonnet fallback request.
+            // System prompt stays as firstPassSystemPrompt — same for both models.
+            // Only the model string changes.
+            var sonnetBody = body
+            sonnetBody["model"] = Constants.model // claude-sonnet-4-20250514
+
+            let sonnetResponse = try await makeRequest(body: sonnetBody)
+
+            guard let sonnetDict = extractJSONDictionary(from: sonnetResponse) else {
+                throw APIError.decodingError("Both Haiku and Sonnet returned non-JSON.\n\nHaiku raw:\n\(responseToProcess)\n\nSonnet raw:\n\(sonnetResponse)")
+            }
+
+            // Sonnet succeeded. Build response from Sonnet dict.
+            let needsQuestion = (sonnetDict["needsQuestion"] as? Bool) ?? false
+            let questionText = (sonnetDict["question"] as? String) ?? ""
+            let modeRaw = (sonnetDict["mode"] as? String) ?? "EMOTIONAL"
+            let mode = parseMode(modeRaw)
+            return FirstPassResponse(needsQuestion: needsQuestion, question: questionText, mode: mode)
         }
 
-        // Manually build FirstPassResponse from the dictionary with safe defaults.
-        // This avoids Codable strictness — missing or oddly-cased fields won't crash the flow.
+        // Haiku succeeded. Sonnet never ran. Build response from Haiku dict.
         let needsQuestion = (dict["needsQuestion"] as? Bool) ?? false
         let questionText = (dict["question"] as? String) ?? ""
         let modeRaw = (dict["mode"] as? String) ?? "EMOTIONAL"
@@ -68,7 +107,7 @@ struct APIClient {
     }
 
     // MARK: - Call 2: Full Decision
-    func secondPass(question: String, followUpAnswer: String = "", useHaiku: Bool = false) async throws -> DecisionResult {
+    func secondPass(question: String, followUpAnswer: String = "", useHaiku: Bool = false, forceCorrupt: Bool = false) async throws -> DecisionResult {
         if Constants.useMockData {
             try await Task.sleep(nanoseconds: 1_500_000_000)
             return .mock
@@ -98,32 +137,85 @@ struct APIClient {
 
         let responseText = try await makeRequest(body: body)
 
-        // Pull out the JSON object from anywhere in the response, then re-serialize
-        // to clean canonical JSON before decoding — bypasses any markdown fences,
-        // preamble text, or whitespace the model might add.
-        guard let dict = extractJSONDictionary(from: responseText),
-              let data = try? JSONSerialization.data(withJSONObject: dict) else {
-            throw APIError.decodingError("Could not find JSON object in response\n\nRaw:\n\(responseText)")
+        #if DEBUG
+        let responseToProcess: String
+        if forceCorrupt {
+            responseToProcess = "This is intentionally corrupted plain text to test the Sonnet fallback mechanism."
+        } else {
+            responseToProcess = responseText
         }
+        #else
+        let responseToProcess = responseText
+        #endif
 
-        // Defensive: Haiku sometimes returns the firstPass-shaped triage JSON
-        // ({needsQuestion, question, mode}) on the secondPass call instead of the
-        // full decision JSON. Detect that and synthesize a fallback DecisionResult
-        // so the user sees something useful rather than a cryptic decode error.
-        if dict["verdict"] == nil && dict["needsQuestion"] != nil {
-            return fallbackDecisionResult(
-                question: question,
-                triageDict: dict,
-                modelUsed: modelToUse
-            )
-        }
+        // SONNET FALLBACK LOGIC:
+        // Same strict condition as firstPass — only triggers when extractJSONDictionary
+        // returns nil. This means the model returned pure plain text or completely malformed
+        // output with zero valid JSON anywhere.
+        //
+        // IMPORTANT — system prompt swap:
+        // When falling back to Sonnet, we must also swap the system prompt.
+        // Haiku uses haikuSystemPrompt. Sonnet uses secondPassSystemPrompt + anchoringRules.
+        // These are different prompts optimized for each model.
+        // Do NOT use haikuSystemPrompt with Sonnet — it will produce worse results.
+        // Do NOT use secondPassSystemPrompt with Haiku — the dedicated Haiku prompt is better.
+        // This swap is intentional and must be preserved if this code is ever modified.
+        if let dict = extractJSONDictionary(from: responseToProcess),
+           let data = try? JSONSerialization.data(withJSONObject: dict) {
 
-        do {
-            var result = try JSONDecoder().decode(DecisionResult.self, from: data)
-            result.modelUsed = modelToUse
-            return result
-        } catch {
-            throw APIError.decodingError("JSON decode failed: \(error.localizedDescription)\n\nRaw: \(responseText)")
+            // Haiku succeeded. Sonnet never ran.
+
+            // Defensive: Haiku sometimes returns the firstPass-shaped triage JSON
+            // ({needsQuestion, question, mode}) on the secondPass call instead of the
+            // full decision JSON. Detect that and synthesize a fallback DecisionResult
+            // so the user sees something useful rather than a cryptic decode error.
+            if dict["verdict"] == nil && dict["needsQuestion"] != nil {
+                return fallbackDecisionResult(
+                    question: question,
+                    triageDict: dict,
+                    modelUsed: modelToUse
+                )
+            }
+
+            do {
+                var result = try JSONDecoder().decode(DecisionResult.self, from: data)
+                result.modelUsed = modelToUse // stamps "claude-haiku-4-5-20251001"
+                return result
+            } catch {
+                throw APIError.decodingError("Haiku JSON decode failed: \(error.localizedDescription)\n\nRaw:\n\(responseToProcess)")
+            }
+
+        } else {
+
+            // Haiku returned non-JSON. Silent Sonnet fallback.
+            #if DEBUG
+            print("⚠️ [FALLBACK] secondPass: Haiku returned non-JSON. Triggering Sonnet fallback.")
+            print("⚠️ [FALLBACK] Raw Haiku response: \(responseToProcess)")
+            #endif
+
+            // Build Sonnet fallback request.
+            // CRITICAL: swap both model AND system prompt.
+            // Sonnet needs secondPassSystemPrompt + anchoringRules, not haikuSystemPrompt.
+            // See comment above for why this swap is necessary and intentional.
+            var sonnetBody = body
+            sonnetBody["model"] = Constants.model // claude-sonnet-4-20250514
+            sonnetBody["system"] = Constants.secondPassSystemPrompt + Constants.anchoringRules
+
+            let sonnetResponse = try await makeRequest(body: sonnetBody)
+
+            guard let sonnetDict = extractJSONDictionary(from: sonnetResponse),
+                  let sonnetData = try? JSONSerialization.data(withJSONObject: sonnetDict) else {
+                throw APIError.decodingError("Both Haiku and Sonnet returned non-JSON.\n\nSonnet raw:\n\(sonnetResponse)")
+            }
+
+            // Sonnet succeeded. Decode Sonnet response.
+            do {
+                var result = try JSONDecoder().decode(DecisionResult.self, from: sonnetData)
+                result.modelUsed = Constants.model // stamps "claude-sonnet-4-20250514" — shows SONNET badge in debug
+                return result
+            } catch {
+                throw APIError.decodingError("Sonnet fallback decode failed: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -200,14 +292,42 @@ struct APIClient {
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError {
+            switch urlError.code {
+            case .notConnectedToInternet, .networkConnectionLost:
+                throw APIError.networkError("no internet connection. check your connection and try again.")
+            case .timedOut:
+                throw APIError.networkError("the brain took too long to respond. try again in a moment.")
+            case .cannotConnectToHost, .cannotFindHost:
+                throw APIError.networkError("can't reach the brain right now. try again in a moment.")
+            default:
+                throw APIError.networkError("something interrupted the brain. try again in a moment.")
+            }
+        }
 
         guard let httpResponse = response as? HTTPURLResponse else {
             throw APIError.invalidResponse
         }
 
-        guard httpResponse.statusCode == 200 else {
-            throw APIError.httpError(httpResponse.statusCode)
+        guard (200...299).contains(httpResponse.statusCode) else {
+            switch httpResponse.statusCode {
+            case 429:
+                throw APIError.networkError("the brain needs a breather. wait a moment and try again.")
+            case 529:
+                throw APIError.networkError("the brain is overwhelmed right now. try again in a moment.")
+            case 500:
+                throw APIError.networkError("the brain hit a wall. this is on us. try again in a moment.")
+            case 502, 503, 504:
+                throw APIError.networkError("the brain is unreachable right now. try again in a moment.")
+            case 401, 403:
+                throw APIError.networkError("the brain lost its connection. restart the app and try again.")
+            default:
+                throw APIError.networkError("something interrupted the brain. try again in a moment.")
+            }
         }
 
         guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],

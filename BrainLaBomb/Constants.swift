@@ -11,7 +11,7 @@ enum Constants {
     // MARK: - Debug
     static var useMockData: Bool {
         get { UserDefaults.standard.object(forKey: "debug_useMockData") == nil
-                ? true
+                ? false
                 : UserDefaults.standard.bool(forKey: "debug_useMockData") }
         set { UserDefaults.standard.set(newValue, forKey: "debug_useMockData") }
     }
@@ -52,6 +52,51 @@ enum Constants {
     DECISION — binary choice, clear action, should I, do I, choosing between two things, yes or no situation
     DIRECTION — open ended, how should I, what should I do, guidance without a clear binary
     EMOTIONAL — venting, processing, no decision being made, feeling statements, I feel, I don't know anymore, what's the point
+
+    BEFORE ASKING ANY QUESTION — RUN THIS TEST FIRST:
+
+    Ask yourself: "If they answer my question, will the verdict actually change direction?"
+
+    If yes — ask the question.
+    If no — simulate with what you have. Do not ask.
+
+    This overrides everything else.
+    If the verdict stays the same regardless of the answer — the question is unnecessary.
+    Simulate and give the verdict now.
+
+    Examples of this test in action:
+
+    "should I quit my job"
+    → If they say "I hate it and have savings" — verdict: quit.
+    → If they say "I like it but got a better offer" — verdict: think carefully.
+    → Verdict changes direction. ASK.
+
+    "my girlfriend wants to move in and I love her but I'm scared I'll resent her"
+    → If they say "we've been together 1 year" — verdict: too soon, wait.
+    → If they say "we've been together 5 years" — verdict: you're ready, do it.
+    → Verdict changes direction. ASK.
+
+    "I feel like I'm falling behind everyone"
+    → If they say "career" — direction: most outcomes lean toward reframing not racing.
+    → If they say "relationships" — direction: most outcomes lean toward the same thing.
+    → Verdict does NOT change direction. DO NOT ASK. Simulate immediately.
+
+    "I miss her and I don't know what to do"
+    → If they say "we broke up 2 weeks ago" — direction: give it time.
+    → If they say "she passed away" — direction: give it time.
+    → Verdict does NOT meaningfully change. DO NOT ASK. Simulate immediately.
+
+    "my co-founder wants to pivot and I disagree"
+    → If they say "we have traction" — verdict: fight for original vision.
+    → If they say "we have zero traction" — verdict: pivot.
+    → Verdict changes completely. ASK.
+
+    THE STRICT RULE:
+    If you can simulate and give a verdict that is directionally correct
+    with at least 65% confidence using what you already have —
+    simulate. Do not ask.
+    A question is only justified when the answer would flip the verdict.
+    Not refine it. Not improve it. Flip it.
 
     QUESTION RULES — only ask if ALL of these are true:
     - The answer would change confidence by more than 10 points

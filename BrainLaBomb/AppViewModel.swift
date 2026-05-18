@@ -28,6 +28,8 @@ class AppViewModel: ObservableObject {
     var originalQuestion: String = ""
     var followUpQuestion: String = ""
     var followUpAnswer: String = ""
+    private var savedFollowUpAnswer: String = ""
+    @Published var lastErrorWasOverload: Bool = false
 
     // MARK: - History
     @Published var thinkHistory: [Think] = []
@@ -64,7 +66,7 @@ class AppViewModel: ObservableObject {
     }
 
     #if DEBUG
-    @Published var debugTier: AppTier = .free
+    @Published var debugTier: AppTier = .pro
     #endif
 
     var coreThinksUsed: Int {
@@ -177,7 +179,8 @@ class AppViewModel: ObservableObject {
     }
 
     #if DEBUG
-    @Published var forceHaikuMode: Bool = false
+    @Published var forceHaikuMode: Bool = true
+    @Published var forceNextResponseCorrupt: Bool = false
     #endif
 
     // MARK: - Init
@@ -191,12 +194,19 @@ class AppViewModel: ObservableObject {
             appState = .paywallRequired
             return
         }
+        savedFollowUpAnswer = ""
         originalQuestion = question
         appState = .processingFirst
 
+        #if DEBUG
+        let corrupt = forceNextResponseCorrupt
+        #else
+        let corrupt = false
+        #endif
+
         currentTask = Task {
             do {
-                let firstPass = try await APIClient.shared.firstPass(question: question, useHaiku: shouldUseHaiku)
+                let firstPass = try await APIClient.shared.firstPass(question: question, useHaiku: shouldUseHaiku, forceCorrupt: corrupt)
 
                 await MainActor.run {
                     if firstPass.needsQuestion && !firstPass.question.isEmpty {
@@ -208,12 +218,18 @@ class AppViewModel: ObservableObject {
                 }
 
                 if case .processingSecond = await MainActor.run(body: { self.appState }) {
-                    await runSecondPass(answer: "")
+                    await runSecondPass(answer: "", forceCorrupt: corrupt)
                 }
 
             } catch {
                 await MainActor.run {
-                    self.appState = .error(error.localizedDescription)
+                    let msg = error.localizedDescription
+                    self.lastErrorWasOverload = msg.contains("breather") || msg.contains("overwhelmed")
+                    #if DEBUG
+                    self.appState = .error(msg)
+                    #else
+                    self.appState = .error(self.extractFriendlyMessage(msg))
+                    #endif
                 }
             }
         }
@@ -221,10 +237,17 @@ class AppViewModel: ObservableObject {
 
     func submitFollowUp(answer: String) {
         followUpAnswer = answer
+        savedFollowUpAnswer = answer
         appState = .processingSecond
 
+        #if DEBUG
+        let corrupt = forceNextResponseCorrupt
+        #else
+        let corrupt = false
+        #endif
+
         currentTask = Task {
-            await runSecondPass(answer: answer)
+            await runSecondPass(answer: answer, forceCorrupt: corrupt)
         }
     }
 
@@ -232,15 +255,19 @@ class AppViewModel: ObservableObject {
         submitFollowUp(answer: "")
     }
 
-    private func runSecondPass(answer: String) async {
+    private func runSecondPass(answer: String, forceCorrupt: Bool = false) async {
         do {
             let result = try await APIClient.shared.secondPass(
                 question: originalQuestion,
                 followUpAnswer: answer,
-                useHaiku: shouldUseHaiku
+                useHaiku: shouldUseHaiku,
+                forceCorrupt: forceCorrupt
             )
 
             await MainActor.run {
+                #if DEBUG
+                self.forceNextResponseCorrupt = false
+                #endif
                 self.thinksUsed += 1
                 self.incrementThinkCounters()
                 self.saveThink(result: result)
@@ -249,9 +276,29 @@ class AppViewModel: ObservableObject {
 
         } catch {
             await MainActor.run {
-                self.appState = .error(error.localizedDescription)
+                let msg = error.localizedDescription
+                self.lastErrorWasOverload = msg.contains("breather") || msg.contains("overwhelmed")
+                #if DEBUG
+                self.forceNextResponseCorrupt = false
+                self.appState = .error(msg)
+                #else
+                self.appState = .error(self.extractFriendlyMessage(msg))
+                #endif
             }
         }
+    }
+
+    private func extractFriendlyMessage(_ message: String) -> String {
+        let technicalPrefixes = [
+            "JSON decode", "Could not", "Server error", "URLError",
+            "The request", "Haiku", "Sonnet", "Both Haiku", "Invalid response"
+        ]
+        for prefix in technicalPrefixes {
+            if message.hasPrefix(prefix) {
+                return "something went wrong. try again in a moment."
+            }
+        }
+        return message
     }
 
     func reset() {
@@ -260,14 +307,44 @@ class AppViewModel: ObservableObject {
         originalQuestion = ""
         followUpQuestion = ""
         followUpAnswer = ""
+        savedFollowUpAnswer = ""
+        lastErrorWasOverload = false
         appState = .home
     }
 
     func retry() {
-        if originalQuestion.isEmpty {
+        guard !originalQuestion.isEmpty else {
             appState = .home
+            return
+        }
+
+        let savedAnswer = savedFollowUpAnswer
+        let isOverload = lastErrorWasOverload
+        lastErrorWasOverload = false
+
+        if !savedAnswer.isEmpty {
+            // Error happened in secondPass — jump straight to secondPass with saved answer.
+            // User does not have to answer the follow-up question again.
+            currentTask?.cancel()
+            appState = .processingSecond
+            currentTask = Task {
+                if isOverload {
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                }
+                await self.runSecondPass(answer: savedAnswer)
+            }
         } else {
-            submitQuestion(originalQuestion)
+            // Error happened in firstPass — restart full flow from the beginning.
+            if isOverload {
+                currentTask?.cancel()
+                appState = .processingFirst
+                currentTask = Task {
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    await MainActor.run { self.submitQuestion(self.originalQuestion) }
+                }
+            } else {
+                submitQuestion(originalQuestion)
+            }
         }
     }
 
