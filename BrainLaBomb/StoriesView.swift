@@ -196,36 +196,27 @@ struct StoriesView: View {
                 })
             }
 
-            // ── Lock overlay for blurred cards (above tap zones, below Chrome) ──
-            if (currentIndex == 3 + reasoningOffset && !isPaidTier) || (currentIndex == 4 + reasoningOffset && !shouldShowHistoryCard && !isPaidTier) {
+            // ── Paywall button (above tap zones so taps register) ────────────
+            if !isPaidTier && (
+                currentIndex == 3 + reasoningOffset ||
+                (currentIndex == 4 + reasoningOffset && shouldShowHistoryCard) ||
+                (currentIndex == 5 + reasoningOffset && needsTwoHistoryCards) ||
+                currentIndex == totalCards - 1
+            ) {
                 VStack {
                     Spacer()
-                    VStack(spacing: 16) {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(Color(white: 0.45))
-                        Text(currentIndex == 3 + reasoningOffset
-                            ? "unlock to see what\nthis means about you"
-                            : "unlock to reveal\nyour pattern identity")
-                            .font(.custom("HelveticaNeue", size: 15))
-                            .foregroundColor(.white)
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(4)
-                        Button { showPaywall = true } label: {
-                            Text("unlock pro →")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.black)
-                                .padding(.horizontal, 28)
-                                .padding(.vertical, 12)
-                                .background(Color.white)
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(PlainButtonStyle())
+                    Button { showPaywall = true } label: {
+                        Text("unlock pro →")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 28)
+                            .padding(.vertical, 12)
+                            .background(Color.white)
+                            .clipShape(Capsule())
                     }
-                    Spacer()
+                    .buttonStyle(PlainButtonStyle())
                     Spacer()
                 }
-                .frame(maxWidth: .infinity)
             }
 
             // ── Chrome (sits above tap zones so buttons work) ─────────────────
@@ -356,6 +347,14 @@ struct StoriesView: View {
                                 .background(debugForcePattern ? Color.white : Color(white: 0.14))
                                 .clipShape(Capsule())
                         }
+                        Button { viewModel.refreshPatternIfNeeded() } label: {
+                            Text("PAT↺")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(Color(white: 0.55))
+                                .frame(width: 42, height: 28)
+                                .background(Color(white: 0.14))
+                                .clipShape(Capsule())
+                        }
                         Button { debugForceDoubleReasoning.toggle() } label: {
                             Text("R2")
                                 .font(.system(size: 11, weight: .semibold))
@@ -417,7 +416,7 @@ struct StoriesView: View {
         )
         .onAppear { startProgress() }
         .onDisappear { stopTimer() }
-        .sheet(isPresented: $showPaywall) { PaywallView() }
+        .fullScreenCover(isPresented: $showPaywall) { PaywallView() }
     }
 
     // ── Tap zone helper ───────────────────────────────────────────────────────
@@ -763,30 +762,44 @@ struct StoriesView: View {
                 .foregroundColor(.white)
                 .padding(.bottom, 12)
 
-            VStack(alignment: .leading, spacing: 12) {
-                Text(result.archetype.description)
-                    .font(.custom("HelveticaNeue", size: 17))
-                    .foregroundColor(Color(white: 0.5))
-                    .lineSpacing(4)
-                    .fixedSize(horizontal: false, vertical: true)
+            ZStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(result.archetype.description)
+                        .font(.custom("HelveticaNeue", size: 17))
+                        .foregroundColor(Color(white: 0.5))
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
 
-                Rectangle()
-                    .fill(Color(white: 0.12))
-                    .frame(height: 1)
-                    .padding(.vertical, 8)
+                    Rectangle()
+                        .fill(Color(white: 0.12))
+                        .frame(height: 1)
+                        .padding(.vertical, 8)
 
-                HStack(alignment: .bottom, spacing: 6) {
-                    Text("\(result.archetype.percentage)%")
-                        .font(.custom("HelveticaNeue", size: 32))
-                        .foregroundColor(.white)
-                    Text("of thinkers\nshare this archetype")
-                        .font(.custom("HelveticaNeue", size: 12))
-                        .foregroundColor(Color(white: 0.3))
-                        .lineSpacing(3)
+                    HStack(alignment: .bottom, spacing: 6) {
+                        Text("\(result.archetype.percentage)%")
+                            .font(.custom("HelveticaNeue", size: 32))
+                            .foregroundColor(.white)
+                        Text("of thinkers\nshare this archetype")
+                            .font(.custom("HelveticaNeue", size: 12))
+                            .foregroundColor(Color(white: 0.3))
+                            .lineSpacing(3)
+                    }
                 }
+                .blur(radius: 8)
+                .allowsHitTesting(false)
+
+                VStack(spacing: 14) {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(Color(white: 0.45))
+                    Text("unlock to see what\nthis means about you")
+                        .font(.custom("HelveticaNeue", size: 15))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(4)
+                }
+                .padding(.top, 16)
             }
-            .blur(radius: 8)
-            .allowsHitTesting(false)
 
             Spacer()
         }
@@ -816,26 +829,17 @@ struct StoriesView: View {
                 .allowsHitTesting(isPaidTier)
 
                 if !isPaidTier {
-                    VStack(spacing: 16) {
+                    VStack(spacing: 14) {
                         Image(systemName: "lock.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(Color(white: 0.5))
+                            .font(.system(size: 20))
+                            .foregroundColor(Color(white: 0.45))
                         Text("unlock to reveal\nyour pattern identity")
                             .font(.custom("HelveticaNeue", size: 15))
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                             .lineSpacing(4)
-                        Button { showPaywall = true } label: {
-                            Text("unlock pro →")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.black)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 10)
-                                .background(Color.white)
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(PlainButtonStyle())
                     }
+                    .frame(maxWidth: .infinity)
                 }
             }
 
@@ -843,6 +847,15 @@ struct StoriesView: View {
         }
         .padding(.horizontal, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .onAppear {
+            // Only refresh if no pattern data exists.
+            // Matching the correct guard in PatternView.swift line 43.
+            // Without this guard — API fires every time user reaches this card
+            // causing pattern identity to regenerate with different results each time.
+            if viewModel.thinkCountForPattern >= 5 && viewModel.patternData == nil {
+                viewModel.refreshPatternIfNeeded()
+            }
+        }
     }
 
     // MARK: – Card 6: History Insight ───────────────────────────────────────
@@ -861,7 +874,7 @@ struct StoriesView: View {
                     .lineSpacing(8)
                     .padding(.horizontal, 28)
             } else {
-                ZStack {
+                ZStack(alignment: .top) {
                     Text(historyPart1)
                         .font(.custom("HelveticaNeue", size: 22))
                         .foregroundColor(.white)
@@ -870,26 +883,17 @@ struct StoriesView: View {
                         .blur(radius: 8)
                         .allowsHitTesting(false)
 
-                    VStack(spacing: 16) {
+                    VStack(spacing: 14) {
                         Image(systemName: "lock.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(Color(white: 0.5))
+                            .font(.system(size: 20))
+                            .foregroundColor(Color(white: 0.45))
                         Text("unlock to see what\nthe brain noticed about you")
                             .font(.custom("HelveticaNeue", size: 15))
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                             .lineSpacing(4)
-                        Button { showPaywall = true } label: {
-                            Text("unlock pro →")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.black)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 10)
-                                .background(Color.white)
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(PlainButtonStyle())
                     }
+                    .padding(.top, 16)
                 }
             }
 
@@ -919,7 +923,7 @@ struct StoriesView: View {
                     .lineSpacing(8)
                     .padding(.horizontal, 28)
             } else {
-                ZStack {
+                ZStack(alignment: .top) {
                     Text(historyPart2)
                         .font(.custom("HelveticaNeue", size: 22))
                         .foregroundColor(.white)
@@ -928,26 +932,17 @@ struct StoriesView: View {
                         .blur(radius: 8)
                         .allowsHitTesting(false)
 
-                    VStack(spacing: 16) {
+                    VStack(spacing: 14) {
                         Image(systemName: "lock.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(Color(white: 0.5))
+                            .font(.system(size: 20))
+                            .foregroundColor(Color(white: 0.45))
                         Text("unlock to see what\nthe brain noticed about you")
                             .font(.custom("HelveticaNeue", size: 15))
                             .foregroundColor(.white)
                             .multilineTextAlignment(.center)
                             .lineSpacing(4)
-                        Button { showPaywall = true } label: {
-                            Text("unlock pro →")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.black)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 10)
-                                .background(Color.white)
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(PlainButtonStyle())
                     }
+                    .padding(.top, 16)
                 }
             }
 
@@ -979,7 +974,9 @@ struct StoriesView: View {
                 }
             }
 
-            Text("\(max(0, 5 - viewModel.thinkCountForPattern)) more thinks until your pattern emerges.")
+            Text(viewModel.thinkCountForPattern >= 5
+                ? "your pattern is being analyzed…"
+                : "\(max(0, 5 - viewModel.thinkCountForPattern)) more thinks until your pattern emerges.")
                 .font(.custom("HelveticaNeue", size: 12))
                 .foregroundColor(Color(white: 0.25))
                 .padding(.top, 8)

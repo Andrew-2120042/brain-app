@@ -41,7 +41,13 @@ struct APIClient {
         let body: [String: Any] = [
             "model": modelToUse,
             "max_tokens": 300,
-            "system": Constants.firstPassSystemPrompt,
+            "system": [
+                [
+                    "type": "text",
+                    "text": Constants.firstPassSystemPrompt,
+                    "cache_control": ["type": "ephemeral"]
+                ]
+            ],
             "messages": messages
         ]
 
@@ -131,7 +137,13 @@ struct APIClient {
         let body: [String: Any] = [
             "model": modelToUse,
             "max_tokens": 1500,
-            "system": systemPrompt,
+            "system": [
+                [
+                    "type": "text",
+                    "text": systemPrompt,
+                    "cache_control": ["type": "ephemeral"]
+                ]
+            ],
             "messages": messages
         ]
 
@@ -199,7 +211,13 @@ struct APIClient {
             // See comment above for why this swap is necessary and intentional.
             var sonnetBody = body
             sonnetBody["model"] = Constants.model // claude-sonnet-4-20250514
-            sonnetBody["system"] = Constants.secondPassSystemPrompt + Constants.anchoringRules
+            sonnetBody["system"] = [
+                [
+                    "type": "text",
+                    "text": Constants.secondPassSystemPrompt + Constants.anchoringRules,
+                    "cache_control": ["type": "ephemeral"]
+                ]
+            ]
 
             let sonnetResponse = try await makeRequest(body: sonnetBody)
 
@@ -245,7 +263,13 @@ struct APIClient {
         let body: [String: Any] = [
             "model": "claude-haiku-4-5-20251001",
             "max_tokens": 700,
-            "system": Constants.patternAnalysisPrompt,
+            "system": [
+                [
+                    "type": "text",
+                    "text": Constants.patternAnalysisPrompt,
+                    "cache_control": ["type": "ephemeral"]
+                ]
+            ],
             "messages": [["role": "user", "content": userMessage]]
         ]
 
@@ -288,6 +312,7 @@ struct APIClient {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue(Constants.apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue(Constants.anthropicVersion, forHTTPHeaderField: "anthropic-version")
+        request.setValue("prompt-caching-2024-07-31", forHTTPHeaderField: "anthropic-beta")
         request.timeoutInterval = 30
 
         request.httpBody = try JSONSerialization.data(withJSONObject: body)

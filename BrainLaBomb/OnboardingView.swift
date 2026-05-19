@@ -19,14 +19,15 @@ struct OnboardingView: View {
             switch currentScreen {
             case 0:  screenOne.transition(.opacity)
             case 1:  screenTwo.transition(.opacity)
-            case 2:  screenQuiz1.transition(.opacity)
-            case 3:  screenQuiz2.transition(.opacity)
-            case 4:  screenQuiz3.transition(.opacity)
-            case 5:  screenBuildingBrain.transition(.opacity)
-            case 6:  screenHowItWorks.transition(.opacity)
-            case 7:  screenNotifications.transition(.opacity)
-            case 8:  screenPaywall.transition(.opacity)
-            case 9:  screenDone.transition(.opacity)
+            case 2:  consentScreen.transition(.opacity)
+            case 3:  screenQuiz1.transition(.opacity)
+            case 4:  screenQuiz2.transition(.opacity)
+            case 5:  screenQuiz3.transition(.opacity)
+            case 6:  screenBuildingBrain.transition(.opacity)
+            case 7:  screenHowItWorks.transition(.opacity)
+            case 8:  screenNotifications.transition(.opacity)
+            case 9:  screenPaywall.transition(.opacity)
+            case 10: screenDone.transition(.opacity)
             default: screenOne.transition(.opacity)
             }
         }
@@ -76,13 +77,77 @@ struct OnboardingView: View {
                     .lineSpacing(24 * 0.5)
             }
             Spacer()
-            onboardingButton("that's different") { currentScreen = 2 }
+            onboardingButton("that's different") { currentScreen = 2 } // → consent screen
                 .padding(.bottom, 52)
         }
         .padding(.horizontal, 24)
     }
 
-    // MARK: - Screen 2 — Quiz 1
+    // MARK: - Screen 2 — Consent
+
+    private var consentScreen: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer()
+            Text("before we begin.")
+                .font(.system(size: 32, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 16)
+            Text("your thinks are processed by Claude AI.\nwhat you share leaves your device\nto generate a response.")
+                .font(.system(size: 22, weight: .light))
+                .foregroundColor(.white.opacity(0.5))
+                .lineSpacing(6)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 12)
+            Text("we don't store your thinks.\nno servers. no profiles. no ads.\neverything stays between you and the brain.")
+                .font(.system(size: 22, weight: .light))
+                .foregroundColor(.white.opacity(0.5))
+                .lineSpacing(6)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 12)
+            Text("the brain provides perspective.\nnot instructions.\nall decisions remain entirely yours.")
+                .font(.system(size: 22, weight: .light))
+                .foregroundColor(.white.opacity(0.5))
+                .lineSpacing(6)
+                .padding(.horizontal, 32)
+            Spacer()
+            Spacer()
+            Button(action: {
+                UserDefaults.standard.set(true, forKey: "hasGivenAIConsent")
+                withAnimation(.easeInOut(duration: 0.4)) { currentScreen = 3 }
+            }) {
+                Text("I understand and agree")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundColor(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+            }
+            .buttonStyle(PlainButtonStyle())
+            .padding(.horizontal, 32)
+            .padding(.bottom, 12)
+            HStack {
+                Spacer()
+                Button(action: {
+                    if let url = URL(string: "https://creative-sailfish-dc6.notion.site/privacy-policy-3647cd351f5b807b9021d48d42a71a0b") {
+                        UIApplication.shared.open(url)
+                    }
+                }) {
+                    Text("read our privacy policy")
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.white.opacity(0.3))
+                        .underline()
+                }
+                .buttonStyle(PlainButtonStyle())
+                Spacer()
+            }
+            .padding(.bottom, 48)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - Screen 3 — Quiz 1
 
     private let quiz1Options = [
         "constantly — almost every day",
@@ -115,13 +180,13 @@ struct OnboardingView: View {
                 }
             }
             Spacer()
-            onboardingButton("continue") { currentScreen = 3 }
+            onboardingButton("continue") { currentScreen = 4 }
                 .padding(.bottom, 52)
         }
         .padding(.horizontal, 24)
     }
 
-    // MARK: - Screen 3 — Quiz 2
+    // MARK: - Screen 4 — Quiz 2
 
     private let quiz2Options = [
         "knowing what I actually want",
@@ -154,13 +219,13 @@ struct OnboardingView: View {
                 }
             }
             Spacer()
-            onboardingButton("continue") { currentScreen = 4 }
+            onboardingButton("continue") { currentScreen = 5 }
                 .padding(.bottom, 52)
         }
         .padding(.horizontal, 24)
     }
 
-    // MARK: - Screen 4 — Quiz 3
+    // MARK: - Screen 5 — Quiz 3
 
     private let quiz3Options = [
         "late at night when everything gets loud",
@@ -193,13 +258,13 @@ struct OnboardingView: View {
                 }
             }
             Spacer()
-            onboardingButton("continue") { currentScreen = 5 }
+            onboardingButton("continue") { currentScreen = 6 }
                 .padding(.bottom, 52)
         }
         .padding(.horizontal, 24)
     }
 
-    // MARK: - Screen 5 — Building Brain
+    // MARK: - Screen 6 — Building Brain
 
     private var screenBuildingBrain: some View {
         VStack(spacing: 0) {
@@ -245,12 +310,12 @@ struct OnboardingView: View {
                 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                currentScreen = 6
+                currentScreen = 7
             }
         }
     }
 
-    // MARK: - Screen 6 — How It Works
+    // MARK: - Screen 7 — How It Works
 
     private var screenHowItWorks: some View {
         VStack(spacing: 0) {
@@ -270,7 +335,7 @@ struct OnboardingView: View {
                 }
             }
             Spacer()
-            onboardingButton("I'm ready") { currentScreen = 7 }
+            onboardingButton("I'm ready") { currentScreen = 8 }
                 .padding(.bottom, 52)
         }
         .padding(.horizontal, 24)
@@ -293,7 +358,7 @@ struct OnboardingView: View {
         .padding(.vertical, 20)
     }
 
-    // MARK: - Screen 7 — Notifications
+    // MARK: - Screen 8 — Notifications
 
     private var screenNotifications: some View {
         VStack(spacing: 0) {
@@ -314,10 +379,10 @@ struct OnboardingView: View {
             Spacer()
             VStack(spacing: 12) {
                 onboardingButton("yes, find me") {
-                    requestNotificationPermission { currentScreen = 8 }
+                    requestNotificationPermission { currentScreen = 9 }
                 }
                 Button {
-                    currentScreen = 8
+                    currentScreen = 9
                 } label: {
                     Text("not yet")
                         .font(.system(size: 17, weight: .regular))
@@ -335,7 +400,7 @@ struct OnboardingView: View {
         .padding(.horizontal, 24)
     }
 
-    // MARK: - Screen 8 — Onboarding Paywall
+    // MARK: - Screen 9 — Onboarding Paywall
 
     private var screenPaywall: some View {
         GeometryReader { proxy in
@@ -406,7 +471,7 @@ struct OnboardingView: View {
                 Group {
                     if selectedPlan == 0 {
                         Button {
-                            currentScreen = 9
+                            currentScreen = 10
                         } label: {
                             Text("continue for free")
                                 .font(.system(size: 17, weight: .bold))
@@ -421,7 +486,7 @@ struct OnboardingView: View {
                     } else {
                         onboardingButton(selectedPlan == 1 ? "get Core — $39.99" : "start my 3-day free trial") {
                             // TODO: RevenueCat purchase call
-                            currentScreen = 9
+                            currentScreen = 10
                         }
                     }
                 }
@@ -436,7 +501,7 @@ struct OnboardingView: View {
                     }
                     Text("·").foregroundColor(Color(white: 0.15))
                     Button {
-                        if let url = URL(string: "https://brainlabomb.com/terms") {
+                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/Terms-and-conditions-3647cd351f5b8000b482d1062d00f0ad") {
                             UIApplication.shared.open(url)
                         }
                     } label: {
@@ -446,7 +511,7 @@ struct OnboardingView: View {
                     }
                     Text("·").foregroundColor(Color(white: 0.15))
                     Button {
-                        if let url = URL(string: "https://brainlabomb.com/privacy") {
+                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/privacy-policy-3647cd351f5b807b9021d48d42a71a0b") {
                             UIApplication.shared.open(url)
                         }
                     } label: {
@@ -545,7 +610,7 @@ struct OnboardingView: View {
         }
     }
 
-    // MARK: - Screen 9 — Done
+    // MARK: - Screen 10 — Done
 
     private var screenDone: some View {
         VStack(spacing: 0) {

@@ -107,7 +107,7 @@ struct PaywallView: View {
                     }
                     Text("·").foregroundColor(Color(white: 0.15))
                     Button {
-                        if let url = URL(string: "https://brainlabomb.com/privacy") {
+                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/privacy-policy-3647cd351f5b807b9021d48d42a71a0b") {
                             UIApplication.shared.open(url)
                         }
                     } label: {
@@ -117,7 +117,7 @@ struct PaywallView: View {
                     }
                     Text("·").foregroundColor(Color(white: 0.15))
                     Button {
-                        if let url = URL(string: "https://brainlabomb.com/terms") {
+                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/Terms-and-conditions-3647cd351f5b8000b482d1062d00f0ad") {
                             UIApplication.shared.open(url)
                         }
                     } label: {
