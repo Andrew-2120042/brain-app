@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 enum AppState {
     case home
@@ -56,18 +57,10 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Tier Management
 
-    var currentTier: AppTier {
-        // TODO: replace with RevenueCat check when integrated
-        #if DEBUG
-        return debugTier
-        #else
-        return .free
-        #endif
-    }
-
-    #if DEBUG
+    // TODO: replace with RevenueCat check when integrated
     @Published var debugTier: AppTier = .pro
-    #endif
+
+    var currentTier: AppTier { debugTier }
 
     var coreThinksUsed: Int {
         get { UserDefaults.standard.integer(forKey: "coreThinksUsed") }
@@ -170,18 +163,7 @@ class AppViewModel: ObservableObject {
         monthlyChatCount += 1
     }
 
-    var shouldUseHaiku: Bool {
-        #if DEBUG
-        return forceHaikuMode
-        #else
-        return true
-        #endif
-    }
-
-    #if DEBUG
-    @Published var forceHaikuMode: Bool = true
-    @Published var forceNextResponseCorrupt: Bool = false
-    #endif
+    var shouldUseHaiku: Bool { return true }
 
     // MARK: - Init
     init() {
@@ -198,15 +180,12 @@ class AppViewModel: ObservableObject {
         originalQuestion = question
         appState = .processingFirst
 
-        #if DEBUG
-        let corrupt = forceNextResponseCorrupt
-        #else
-        let corrupt = false
-        #endif
+        // TODO: RENAME — replace with final app name before App Store submission
+        let bgTask = UIApplication.shared.beginBackgroundTask(withName: "vael.think", expirationHandler: nil)
 
         currentTask = Task {
             do {
-                let firstPass = try await APIClient.shared.firstPass(question: question, useHaiku: shouldUseHaiku, forceCorrupt: corrupt)
+                let firstPass = try await APIClient.shared.firstPass(question: question, useHaiku: shouldUseHaiku)
 
                 await MainActor.run {
                     if firstPass.needsQuestion && !firstPass.question.isEmpty {
@@ -218,7 +197,7 @@ class AppViewModel: ObservableObject {
                 }
 
                 if case .processingSecond = await MainActor.run(body: { self.appState }) {
-                    await runSecondPass(answer: "", forceCorrupt: corrupt)
+                    await runSecondPass(answer: "")
                 }
 
             } catch {
@@ -232,6 +211,10 @@ class AppViewModel: ObservableObject {
                     #endif
                 }
             }
+
+            await MainActor.run {
+                UIApplication.shared.endBackgroundTask(bgTask)
+            }
         }
     }
 
@@ -240,14 +223,15 @@ class AppViewModel: ObservableObject {
         savedFollowUpAnswer = answer
         appState = .processingSecond
 
-        #if DEBUG
-        let corrupt = forceNextResponseCorrupt
-        #else
-        let corrupt = false
-        #endif
+        // TODO: RENAME — replace with final app name before App Store submission
+        let bgTask = UIApplication.shared.beginBackgroundTask(withName: "vael.think", expirationHandler: nil)
 
         currentTask = Task {
-            await runSecondPass(answer: answer, forceCorrupt: corrupt)
+            await runSecondPass(answer: answer)
+
+            await MainActor.run {
+                UIApplication.shared.endBackgroundTask(bgTask)
+            }
         }
     }
 
@@ -255,19 +239,15 @@ class AppViewModel: ObservableObject {
         submitFollowUp(answer: "")
     }
 
-    private func runSecondPass(answer: String, forceCorrupt: Bool = false) async {
+    private func runSecondPass(answer: String) async {
         do {
             let result = try await APIClient.shared.secondPass(
                 question: originalQuestion,
                 followUpAnswer: answer,
-                useHaiku: shouldUseHaiku,
-                forceCorrupt: forceCorrupt
+                useHaiku: shouldUseHaiku
             )
 
             await MainActor.run {
-                #if DEBUG
-                self.forceNextResponseCorrupt = false
-                #endif
                 self.thinksUsed += 1
                 self.incrementThinkCounters()
                 self.saveThink(result: result)
@@ -279,7 +259,6 @@ class AppViewModel: ObservableObject {
                 let msg = error.localizedDescription
                 self.lastErrorWasOverload = msg.contains("breather") || msg.contains("overwhelmed")
                 #if DEBUG
-                self.forceNextResponseCorrupt = false
                 self.appState = .error(msg)
                 #else
                 self.appState = .error(self.extractFriendlyMessage(msg))
@@ -360,7 +339,9 @@ class AppViewModel: ObservableObject {
         currentThinkID = think.id
         saveHistory()
 
-        if thinkHistory.count >= 5 && thinkHistory.count % 5 == 0 {
+        // Run pattern analysis after every think once 5 exist
+        // Uses rolling last 5 thinks as context — fresh pattern and historyInsight every think
+        if thinkHistory.count >= 5 {
             Task { await runPatternAnalysis() }
         }
     }

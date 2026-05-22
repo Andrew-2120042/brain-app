@@ -82,19 +82,11 @@ struct StoriesView: View {
     }
 
     private var isPaidTier: Bool {
-        #if DEBUG
-        return viewModel.debugTier == .core || viewModel.debugTier == .pro
-        #else
-        return false // TODO: RevenueCat
-        #endif
+        viewModel.debugTier == .core || viewModel.debugTier == .pro // TODO: replace with RevenueCat
     }
 
     private var canChat: Bool {
-        #if DEBUG
-        return viewModel.debugTier == .pro
-        #else
-        return false // TODO: RevenueCat
-        #endif
+        viewModel.debugTier == .pro // TODO: replace with RevenueCat
     }
 
     private var historyInsightText: String {
@@ -154,7 +146,7 @@ struct StoriesView: View {
         return String(historyInsightText.dropFirst(historyPart1.count)).trimmingCharacters(in: .whitespaces)
     }
 
-    private var totalCards: Int { (shouldShowHistoryCard ? 6 : 5) + reasoningOffset + historyOffset }
+    private var totalCards: Int { 6 + reasoningOffset + historyOffset }
     private let storyDuration: TimeInterval = 7.0
 
     private var tooltipText: String {
@@ -177,7 +169,7 @@ struct StoriesView: View {
                 case 3 + reasoningOffset:
                     if isPaidTier { archetypeCard } else { blurredArchetypeCard }
                 case 4 + reasoningOffset:
-                    if shouldShowHistoryCard { historyInsightCard } else { patternCard }
+                    historyInsightCard
                 case 5 + reasoningOffset where needsTwoHistoryCards: historyInsightCard2
                 default: patternCard
                 }
@@ -199,7 +191,7 @@ struct StoriesView: View {
             // ── Paywall button (above tap zones so taps register) ────────────
             if !isPaidTier && (
                 currentIndex == 3 + reasoningOffset ||
-                (currentIndex == 4 + reasoningOffset && shouldShowHistoryCard) ||
+                currentIndex == 4 + reasoningOffset ||
                 (currentIndex == 5 + reasoningOffset && needsTwoHistoryCards) ||
                 currentIndex == totalCards - 1
             ) {
@@ -241,15 +233,6 @@ struct StoriesView: View {
 
                 // Buttons row
                 HStack(alignment: .center, spacing: 0) {
-                    #if DEBUG
-                    let isHaiku = result.modelUsed.contains("haiku")
-                    Text(isHaiku ? "HAIKU" : "SONNET")
-                        .font(.system(size: 9, weight: .medium, design: .monospaced))
-                        .foregroundColor(isHaiku ? .orange : Color(white: 0.4))
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(Color(white: 0.12).clipShape(Capsule()))
-                        .padding(.leading, 18)
-                    #endif
                     Spacer()
                     // Info button (cards 2 & 3)
                     if (currentIndex == 1 + reasoningOffset || currentIndex == 2 + reasoningOffset) && (activeMode == .decision || activeMode == .direction) {
@@ -308,86 +291,6 @@ struct StoriesView: View {
                     .padding(.bottom, 36)
                     .transition(.opacity)
                     .animation(.easeInOut(duration: 0.25), value: currentIndex)
-                } else {
-                    // DEBUG: pause + reasoning layout toggle
-                    HStack(spacing: 10) {
-                        Button {
-                            if isPaused { resumeIfNeeded() } else { pauseIfNeeded() }
-                        } label: {
-                            Image(systemName: isPaused ? "play.fill" : "pause.fill")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(white: 0.55))
-                                .frame(width: 36, height: 36)
-                                .background(Color(white: 0.14))
-                                .clipShape(Circle())
-                        }
-                        if currentIndex == 0 {
-                            Button { reasoningDebug.toggle() } label: {
-                                Image(systemName: reasoningDebug ? "text.aligncenter" : "text.alignleft")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(reasoningDebug ? Color.white : Color(white: 0.55))
-                                    .frame(width: 36, height: 36)
-                                    .background(reasoningDebug ? Color(white: 0.28) : Color(white: 0.14))
-                                    .clipShape(Circle())
-                            }
-                        }
-                        // Pattern debug: force pattern card to show full data
-                        Button {
-                            debugForcePattern.toggle()
-                            #if DEBUG
-                            if debugForcePattern && viewModel.patternData == nil {
-                                viewModel.injectMockPatternData()
-                            }
-                            #endif
-                        } label: {
-                            Text("PAT")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(debugForcePattern ? Color.black : Color(white: 0.55))
-                                .frame(width: 38, height: 28)
-                                .background(debugForcePattern ? Color.white : Color(white: 0.14))
-                                .clipShape(Capsule())
-                        }
-                        Button { viewModel.refreshPatternIfNeeded() } label: {
-                            Text("PAT↺")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(Color(white: 0.55))
-                                .frame(width: 42, height: 28)
-                                .background(Color(white: 0.14))
-                                .clipShape(Capsule())
-                        }
-                        Button { debugForceDoubleReasoning.toggle() } label: {
-                            Text("R2")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(debugForceDoubleReasoning ? Color.black : Color(white: 0.55))
-                                .frame(width: 34, height: 28)
-                                .background(debugForceDoubleReasoning ? Color.white : Color(white: 0.14))
-                                .clipShape(Capsule())
-                        }
-                        Button { debugForceDoubleHistory.toggle() } label: {
-                            Text("H2")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(debugForceDoubleHistory ? Color.black : Color(white: 0.55))
-                                .frame(width: 34, height: 28)
-                                .background(debugForceDoubleHistory ? Color.white : Color(white: 0.14))
-                                .clipShape(Capsule())
-                        }
-                        // Mode override buttons
-                        ForEach([DecisionMode.decision, .direction, .emotional], id: \.self) { mode in
-                            let label = mode == .decision ? "D" : mode == .direction ? "Dir" : "E"
-                            let isActive = debugModeOverride == mode
-                            Button { debugModeOverride = isActive ? nil : mode } label: {
-                                Text(label)
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(isActive ? Color.black : Color(white: 0.55))
-                                    .frame(width: 34, height: 28)
-                                    .background(isActive ? Color.white : Color(white: 0.14))
-                                    .clipShape(Capsule())
-                            }
-                        }
-                        Spacer()
-                    }
-                    .padding(.leading, 20)
-                    .padding(.bottom, 36)
                 }
             }
 
@@ -868,20 +771,31 @@ struct StoriesView: View {
                 .padding(.bottom, 32)
 
             if isPaidTier {
-                Text(historyPart1)
-                    .font(.custom("HelveticaNeue", size: 22))
-                    .foregroundColor(.white)
-                    .lineSpacing(8)
-                    .padding(.horizontal, 28)
-            } else {
-                ZStack(alignment: .top) {
+                if historyInsightText.isEmpty {
+                    earlyPatternView.padding(.horizontal, 28)
+                } else {
                     Text(historyPart1)
                         .font(.custom("HelveticaNeue", size: 22))
                         .foregroundColor(.white)
                         .lineSpacing(8)
                         .padding(.horizontal, 28)
-                        .blur(radius: 8)
-                        .allowsHitTesting(false)
+                }
+            } else {
+                ZStack(alignment: .top) {
+                    if historyInsightText.isEmpty {
+                        earlyPatternView
+                            .padding(.horizontal, 28)
+                            .blur(radius: 8)
+                            .allowsHitTesting(false)
+                    } else {
+                        Text(historyPart1)
+                            .font(.custom("HelveticaNeue", size: 22))
+                            .foregroundColor(.white)
+                            .lineSpacing(8)
+                            .padding(.horizontal, 28)
+                            .blur(radius: 8)
+                            .allowsHitTesting(false)
+                    }
 
                     VStack(spacing: 14) {
                         Image(systemName: "lock.fill")
@@ -893,6 +807,7 @@ struct StoriesView: View {
                             .multilineTextAlignment(.center)
                             .lineSpacing(4)
                     }
+                    .frame(maxWidth: .infinity)
                     .padding(.top, 16)
                 }
             }

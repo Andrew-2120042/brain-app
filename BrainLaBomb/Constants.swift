@@ -17,7 +17,7 @@ enum Constants {
     }
 
     // MARK: - App
-    static let maxFreeThinks = 5
+    static let maxFreeThinks = 15
     static let thinksUsedKey = "thinksUsed"
     static let thinkHistoryKey = "thinkHistory"
 
@@ -1196,24 +1196,29 @@ enum Constants {
 
     SECOND — write a historyInsight observation.
 
-    This is a short paragraph — 3 to 4 sentences — the brain talking directly to the person about what it has noticed across their thinks. Not about one think. Across all of them.
+    You have been given the person's most recent 5 thinks.
+    Use these to write a short observation — 2-3 sentences — about what you notice
+    across these recent thinks specifically. Not their entire history.
+    Just what the last 5 thinks reveal about how they've been thinking lately.
 
-    Voice: second person. Direct. Observational. Not judgmental. No "I noticed" or "based on your history." Just the observation stated directly.
-    What they keep coming back to. Who keeps showing up in their choices. What they always do. What they never do. The thing that is consistent enough to be worth naming.
+    This should feel fresh and connected to what they've been bringing. Not a summary of their whole life. A sharp observation about their recent pattern.
+
+    Voice: second person. Direct. Observational. Not judgmental.
+    No "I noticed" or "based on your recent thinks." Just the observation stated directly.
 
     Good example:
-    "Every think you've done involves someone else's expectations sitting inside your decision. Your parents. Your girlfriend. Your manager. You frame your choices around what they need first and what you need second. That pattern is consistent enough now that it's worth naming."
+    "Every think this week involves someone else's reaction sitting inside your decision.
+    You keep framing your choices around what others will think before asking what you actually want.
+    That's worth naming."
 
-    Wrong — too generic:
+    Wrong — too broad, not connected to recent thinks:
     "You tend to overthink decisions and seek external validation before committing to a choice."
 
-    Wrong — announces history:
-    "Looking at your previous thinks I can see that you have asked about career decisions multiple times."
+    Wrong — announces the history:
+    "Looking at your last five thinks, I can see a pattern."
 
-    Wrong — too long:
-    More than 4 sentences. Cut it.
-
-    The observation must be specific to what this person actually brought across their thinks. Not a generic personality read. If you cannot find a genuine specific pattern — return empty string for historyInsight.
+    If the 5 thinks don't reveal a genuine specific pattern — return empty string.
+    Never force an observation that isn't genuinely there.
 
     Respond ONLY with valid JSON. No markdown. No text outside the JSON.
 

@@ -21,6 +21,14 @@ struct APIClient {
     static let shared = APIClient()
     private init() {}
 
+    private let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 60
+        config.timeoutIntervalForResource = 120
+        config.shouldUseExtendedBackgroundIdleMode = true
+        return URLSession(configuration: config)
+    }()
+
     // MARK: - Call 1: Classification
     func firstPass(question: String, useHaiku: Bool = false, forceCorrupt: Bool = false) async throws -> FirstPassResponse {
         if Constants.useMockData {
@@ -241,7 +249,8 @@ struct APIClient {
     func analyzePattern(thinkHistory: [Think]) async throws -> PatternData? {
         guard thinkHistory.count >= 5 else { return nil }
 
-        let historyContext = thinkHistory.map { think in
+        let recentThinks = Array(thinkHistory.suffix(5))
+        let historyContext = recentThinks.map { think in
             """
             Situation: \(think.originalQuestion)
             Verdict: \(think.result.verdict)
@@ -253,11 +262,11 @@ struct APIClient {
         }.joined(separator: "\n---\n")
 
         let userMessage = """
-        Here is this person's think history (\(thinkHistory.count) thinks total):
+        Here are this person's most recent 5 thinks:
 
         \(historyContext)
 
-        Analyze their pattern identity based on this history.
+        Analyze their pattern identity based on these recent thinks.
         """
 
         let body: [String: Any] = [
@@ -313,14 +322,12 @@ struct APIClient {
         request.setValue(Constants.apiKey, forHTTPHeaderField: "x-api-key")
         request.setValue(Constants.anthropicVersion, forHTTPHeaderField: "anthropic-version")
         request.setValue("prompt-caching-2024-07-31", forHTTPHeaderField: "anthropic-beta")
-        request.timeoutInterval = 30
-
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let data: Data
         let response: URLResponse
         do {
-            (data, response) = try await URLSession.shared.data(for: request)
+            (data, response) = try await session.data(for: request)
         } catch let urlError as URLError {
             switch urlError.code {
             case .notConnectedToInternet, .networkConnectionLost:

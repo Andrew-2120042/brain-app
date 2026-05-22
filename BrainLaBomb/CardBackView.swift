@@ -19,11 +19,7 @@ struct CardBackView: View {
     #endif
 
     private var canChat: Bool {
-        #if DEBUG
-        return viewModel.debugTier == .pro
-        #else
-        return false // TODO: RevenueCat
-        #endif
+        viewModel.debugTier == .pro // TODO: replace with RevenueCat
     }
 
     init(result: DecisionResult,
@@ -235,7 +231,7 @@ struct CardBackView: View {
                 }
             )
         }
-        .sheet(isPresented: $showPaywall) {
+        .fullScreenCover(isPresented: $showPaywall) {
             PaywallView()
         }
         .fullScreenCover(isPresented: $showChat) {

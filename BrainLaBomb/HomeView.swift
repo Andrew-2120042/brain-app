@@ -1,5 +1,4 @@
 import SwiftUI
-import UserNotifications
 
 struct HomeView: View {
     let isProcessing: Bool
@@ -11,7 +10,6 @@ struct HomeView: View {
     @State private var showHistory = false
     @State private var showSettings = false
     @State private var historyDragOffset: CGFloat = 0
-    @AppStorage("debug_useMockData") private var useMockData: Bool = false
 
     private let bgURL  = Bundle.main.url(forResource: "home_bg",  withExtension: "mp4")!
     private let bgURL5 = Bundle.main.url(forResource: "home_bg5", withExtension: "mp4")!
@@ -102,19 +100,6 @@ struct HomeView: View {
                     }
 
                     Button {
-                        useMockData.toggle()
-                    } label: {
-                        Text(useMockData ? "MOCK" : "LIVE")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(useMockData ? Color(white: 0.9) : Color(red: 0.4, green: 1.0, blue: 0.5))
-                            .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(
-                                (useMockData ? Color(white: 0.18) : Color(red: 0.1, green: 0.25, blue: 0.12))
-                                    .clipShape(Capsule())
-                            )
-                    }
-
-                    Button {
                         withAnimation(.easeInOut(duration: 0.2)) { homeVersion = (homeVersion + 1) % 2 }
                     } label: {
                         Text("v\(homeVersion + 1)")
@@ -124,31 +109,6 @@ struct HomeView: View {
                             .background(Color(white: 0.12).clipShape(Capsule()))
                     }
 
-                    #if DEBUG
-                    Button {
-                        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-                            DispatchQueue.main.async {
-                                if granted {
-                                    NotificationManager.shared.scheduleTestNotification()
-                                }
-                            }
-                        }
-                    } label: {
-                        Text("notif")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(Color(white: 0.35))
-                            .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(Color(white: 0.12).clipShape(Capsule()))
-                    }
-                    Button {
-                        viewModel.forceHaikuMode.toggle()
-                    } label: {
-                        Text(viewModel.forceHaikuMode ? "HAIKU" : "SONNET")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(viewModel.forceHaikuMode ? .orange : Color(white: 0.5))
-                            .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(Color(white: 0.12).clipShape(Capsule()))
-                    }
                     Button {
                         switch viewModel.debugTier {
                         case .free: viewModel.debugTier = .core
@@ -162,27 +122,14 @@ struct HomeView: View {
                             .padding(.horizontal, 10).padding(.vertical, 5)
                             .background(Color(white: 0.12).clipShape(Capsule()))
                     }
-                    Button {
-                        viewModel.originalQuestion = "debug boundary"
-                        viewModel.appState = .result(DecisionResult.boundary)
-                    } label: {
-                        Text("BDRY")
+
+                    Button { viewModel.thinksUsed = 0 } label: {
+                        Text("RST")
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(.red)
+                            .foregroundColor(Color(white: 0.35))
                             .padding(.horizontal, 10).padding(.vertical, 5)
                             .background(Color(white: 0.12).clipShape(Capsule()))
                     }
-                    Button {
-                        viewModel.forceNextResponseCorrupt.toggle()
-                    } label: {
-                        Text(viewModel.forceNextResponseCorrupt ? "CORRUPT ON" : "CORRUPT")
-                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                            .foregroundColor(viewModel.forceNextResponseCorrupt ? .red : Color(white: 0.5))
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color(white: 0.12).clipShape(Capsule()))
-                    }
-                    #endif
                 }
                 .padding(.top, 0)
                 .padding(.horizontal, 16)
@@ -289,7 +236,6 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    #if DEBUG
     private var tierLabel: String {
         switch viewModel.debugTier {
         case .free: return "FREE"
@@ -305,8 +251,8 @@ struct HomeView: View {
         case .pro:  return Color.green
         }
     }
-    #endif
 }
+
 
 // MARK: - Processing indicator
 

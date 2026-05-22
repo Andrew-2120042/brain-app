@@ -13,6 +13,7 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     }
 }
 
+// TODO: RENAME — replace with final app name before App Store submission
 @main
 struct BrainLaBombApp: App {
     init() {
