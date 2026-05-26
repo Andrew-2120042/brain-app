@@ -28,3 +28,9 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots
 fastlane/test_output
+
+# Large media / scratch files
+BrainLaBomb/onboarding_master_timeline.mp4
+Screen\ Recording\ *.mov
+cosmos_*.mp4
+cosmos_*.gif

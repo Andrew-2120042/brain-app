@@ -235,6 +235,8 @@ struct SettingsView: View {
     }
 
     #if DEBUG
+    @AppStorage("useConversationalOnboarding") private var useConversational = true
+
     private var debugSection: some View {
         VStack(spacing: 0) {
             sectionHeader("debug")
@@ -243,6 +245,17 @@ struct SettingsView: View {
                 NotificationCenter.default.post(name: .replayOnboarding, object: nil)
                 dismiss()
             })
+            HStack {
+                Text("conversational onboarding")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.white)
+                Spacer()
+                Toggle("", isOn: $useConversational)
+                    .labelsHidden()
+                    .tint(Color.white)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 14)
         }
     }
     #endif

@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		004602AB449A77E053008B20 /* onboarding_master_timeline.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 366033398DABC214435230EF /* onboarding_master_timeline.mp4 */; };
+		050D6D2A94445A4CBE044F69 /* FieldNoise.swift in Sources */ = {isa = PBXBuildFile; fileRef = 329FDA547EC50E628C8CD747 /* FieldNoise.swift */; };
 		088BE12596232CAA6CECD65B /* cosmos_2032149229.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = E264C59E6700EA0824D82B97 /* cosmos_2032149229.mp4 */; };
 		08C940CA8C92CC26D403480F /* cosmos_636232917.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 50B494ED6ECE9262F6C2B86D /* cosmos_636232917.mp4 */; };
 		1C5FACA5A8950E3B96793B4D /* cosmos_32819741.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 484BA15E72B96DAC83833123 /* cosmos_32819741.mp4 */; };
@@ -27,7 +29,10 @@
 		67D464B3644FBB0B9E1D0FE9 /* PatternView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 873F1E8A2C2DAAC84879244F /* PatternView.swift */; };
 		6C5BA93F9D024B8604922F23 /* cosmos_636232917_orig.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = C6837D4957FD45D9170FB5F4 /* cosmos_636232917_orig.mp4 */; };
 		789BA3FE182B2FE80A114A2B /* LoopingVideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E7DBB5A3EBD5DC8F2E9D84B /* LoopingVideoView.swift */; };
+		78E47B941548F3146066E917 /* onboarding_timeline.json in Resources */ = {isa = PBXBuildFile; fileRef = E3A6600CFA9727137C598DFF /* onboarding_timeline.json */; };
 		7AC05ABE5736FC428CB4E965 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28EB76498EA4328F1D51260D /* OnboardingView.swift */; };
+		7BA4729F27EDFE4BDF2A9B51 /* ParticleFieldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E61AEAFF164DAD3ADF3AF0D /* ParticleFieldView.swift */; };
+		7CEC33950B72DF2ABB8B4B56 /* OnboardingConversationalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 026139BADAD4577F9C9268CD /* OnboardingConversationalView.swift */; };
 		84DCF99223B103C10FBCC135 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7433B793F4F80856102E9C1 /* ChatView.swift */; };
 		87A7E6811FC63305244B2256 /* SimulatingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5350C3786E92E14442288B1 /* SimulatingView.swift */; };
 		8ACAADFB518146EF3E8A712A /* BrainLaBombApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 927C3FEC2688C66609FFD0D5 /* BrainLaBombApp.swift */; };
@@ -37,6 +42,7 @@
 		983E423B19262C560DCB8088 /* home_bg2.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 563FCBB186E2C750805D16D2 /* home_bg2.mp4 */; };
 		9953490B07AD9770E4947437 /* CardBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E8FF5ADC0D369A28EE4F073 /* CardBackView.swift */; };
 		AFF131F024DFF9D1D1C287A2 /* Poppins-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 2C985A3C78686F01AB718A0F /* Poppins-Medium.ttf */; };
+		B0597096F9D182E90C0A68D6 /* ParticleField.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE6F5697E11A95DFCEE4E4E /* ParticleField.swift */; };
 		B0C47F1712BB88BB98EB8D49 /* home_bg3.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 1522082A7DCA82ABFC56FED2 /* home_bg3.mp4 */; };
 		B838783FDD112238FA48D6EA /* cosmos_901376308.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 760F03E00BE54BD08A005EC0 /* cosmos_901376308.mp4 */; };
 		BC9F17847F7105F897C94AD1 /* DecisionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714831E37F54C42EB5B003FE /* DecisionCard.swift */; };
@@ -46,6 +52,7 @@
 		DA97171DA24CFD9F4C2B87C7 /* QuestionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 939887F0AD182A6E29436A70 /* QuestionCardView.swift */; };
 		DBC667B976995CFF1781B742 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE74AFA51AA8FD478C4C31D5 /* ContentView.swift */; };
 		E2783E32B1F487004ED624C6 /* VideoPlaceholderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3380B128D72F7035B46D5D01 /* VideoPlaceholderView.swift */; };
+		E27D7D347FBED981FC9274ED /* OnboardingVideoController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC470E32D20F8305EAC37D09 /* OnboardingVideoController.swift */; };
 		E27DB3A0B5E6F701C4CE6C80 /* paywall_bg.mov in Resources */ = {isa = PBXBuildFile; fileRef = 119728EC6ED32122E09A3A98 /* paywall_bg.mov */; };
 		E74A4CDB4F839A1DA08A2FEE /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 198E50DA2930E84EE182E354 /* PaywallView.swift */; };
 		E89A66FA4B1A39C023E20378 /* Poppins-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 924B9CF01BCA75ED5EBCE528 /* Poppins-Regular.ttf */; };
@@ -58,6 +65,8 @@
 
 /* Begin PBXFileReference section */
 		00B67017E45E4679936D713A /* StoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoriesView.swift; sourceTree = "<group>"; };
+		026139BADAD4577F9C9268CD /* OnboardingConversationalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingConversationalView.swift; sourceTree = "<group>"; };
+		0E61AEAFF164DAD3ADF3AF0D /* ParticleFieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticleFieldView.swift; sourceTree = "<group>"; };
 		119728EC6ED32122E09A3A98 /* paywall_bg.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = paywall_bg.mov; sourceTree = "<group>"; };
 		1522082A7DCA82ABFC56FED2 /* home_bg3.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = home_bg3.mp4; sourceTree = "<group>"; };
 		1757067727E2486455A3F932 /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
@@ -65,8 +74,10 @@
 		28EB76498EA4328F1D51260D /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		2C985A3C78686F01AB718A0F /* Poppins-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Poppins-Medium.ttf"; sourceTree = "<group>"; };
 		31DC7F0CFA9D84793AA45F49 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		329FDA547EC50E628C8CD747 /* FieldNoise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldNoise.swift; sourceTree = "<group>"; };
 		3380B128D72F7035B46D5D01 /* VideoPlaceholderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlaceholderView.swift; sourceTree = "<group>"; };
 		347CFD7116EE9D5BD2B86927 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		366033398DABC214435230EF /* onboarding_master_timeline.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = onboarding_master_timeline.mp4; sourceTree = "<group>"; };
 		3A14F014B27CDBA7220A82E3 /* home_bg.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = home_bg.mp4; sourceTree = "<group>"; };
 		41FDD73C6CCEFF2ECDD2A69D /* cosmos_343223263.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = cosmos_343223263.mp4; sourceTree = "<group>"; };
 		484BA15E72B96DAC83833123 /* cosmos_32819741.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = cosmos_32819741.mp4; sourceTree = "<group>"; };
@@ -98,10 +109,13 @@
 		A8C9556847546A916085A919 /* InputPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputPageView.swift; sourceTree = "<group>"; };
 		C6837D4957FD45D9170FB5F4 /* cosmos_636232917_orig.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = cosmos_636232917_orig.mp4; sourceTree = "<group>"; };
 		C9054F02041C3AF0C3244F62 /* Poppins-Light.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Poppins-Light.ttf"; sourceTree = "<group>"; };
+		CBE6F5697E11A95DFCEE4E4E /* ParticleField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticleField.swift; sourceTree = "<group>"; };
+		CC470E32D20F8305EAC37D09 /* OnboardingVideoController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingVideoController.swift; sourceTree = "<group>"; };
 		CE74AFA51AA8FD478C4C31D5 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		CFCC3145850BF7DB96778604 /* CardThicknessOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardThicknessOverlay.swift; sourceTree = "<group>"; };
 		D788A04806AD19CE0F6B19BE /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		E264C59E6700EA0824D82B97 /* cosmos_2032149229.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = cosmos_2032149229.mp4; sourceTree = "<group>"; };
+		E3A6600CFA9727137C598DFF /* onboarding_timeline.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = onboarding_timeline.json; sourceTree = "<group>"; };
 		E7433B793F4F80856102E9C1 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		E97BA0603B4C0E32D4A1A8EB /* BrainLaBomb.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BrainLaBomb.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F7BDBB1AF5C775097E6C8DD4 /* cosmos_174870019.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = cosmos_174870019.mp4; sourceTree = "<group>"; };
@@ -123,6 +137,16 @@
 				E98610B2AAC9AB5EA4CC493B /* BrainLaBomb */,
 				41BBC2A0A74BA499B1DF2C8C /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		BCB5093A990043ACB9565F78 /* Particles */ = {
+			isa = PBXGroup;
+			children = (
+				329FDA547EC50E628C8CD747 /* FieldNoise.swift */,
+				CBE6F5697E11A95DFCEE4E4E /* ParticleField.swift */,
+				0E61AEAFF164DAD3ADF3AF0D /* ParticleFieldView.swift */,
+			);
+			path = Particles;
 			sourceTree = "<group>";
 		};
 		E98610B2AAC9AB5EA4CC493B /* BrainLaBomb */ = {
@@ -163,6 +187,10 @@
 				8E7DBB5A3EBD5DC8F2E9D84B /* LoopingVideoView.swift */,
 				31DC7F0CFA9D84793AA45F49 /* Models.swift */,
 				D788A04806AD19CE0F6B19BE /* NotificationManager.swift */,
+				366033398DABC214435230EF /* onboarding_master_timeline.mp4 */,
+				E3A6600CFA9727137C598DFF /* onboarding_timeline.json */,
+				026139BADAD4577F9C9268CD /* OnboardingConversationalView.swift */,
+				CC470E32D20F8305EAC37D09 /* OnboardingVideoController.swift */,
 				28EB76498EA4328F1D51260D /* OnboardingView.swift */,
 				873F1E8A2C2DAAC84879244F /* PatternView.swift */,
 				119728EC6ED32122E09A3A98 /* paywall_bg.mov */,
@@ -176,6 +204,7 @@
 				A5350C3786E92E14442288B1 /* SimulatingView.swift */,
 				00B67017E45E4679936D713A /* StoriesView.swift */,
 				3380B128D72F7035B46D5D01 /* VideoPlaceholderView.swift */,
+				BCB5093A990043ACB9565F78 /* Particles */,
 			);
 			path = BrainLaBomb;
 			sourceTree = "<group>";
@@ -258,6 +287,8 @@
 				B0C47F1712BB88BB98EB8D49 /* home_bg3.mp4 in Resources */,
 				5397E4A0CE7532529B6FCC98 /* home_bg4.mp4 in Resources */,
 				EA02821256DEBD638B5910C4 /* home_bg5.mp4 in Resources */,
+				004602AB449A77E053008B20 /* onboarding_master_timeline.mp4 in Resources */,
+				78E47B941548F3146066E917 /* onboarding_timeline.json in Resources */,
 				E27DB3A0B5E6F701C4CE6C80 /* paywall_bg.mov in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -280,13 +311,18 @@
 				BC9F17847F7105F897C94AD1 /* DecisionCard.swift in Sources */,
 				CFACBB94CA0623C5E121BBFE /* DecisionCardView.swift in Sources */,
 				26D69BE03B69574B489986C5 /* DecisionEngine.swift in Sources */,
+				050D6D2A94445A4CBE044F69 /* FieldNoise.swift in Sources */,
 				C4EE02B17D1396956D6F021E /* HistoryPanelView.swift in Sources */,
 				3C6B2C053B95C2928C2E3250 /* HomeView.swift in Sources */,
 				8B0D3500E293BF4974B25B65 /* InputPageView.swift in Sources */,
 				789BA3FE182B2FE80A114A2B /* LoopingVideoView.swift in Sources */,
 				5D0BC68D1B0980ACC349D819 /* Models.swift in Sources */,
 				2F8B998BCD5ADF60F52B3ABE /* NotificationManager.swift in Sources */,
+				7CEC33950B72DF2ABB8B4B56 /* OnboardingConversationalView.swift in Sources */,
+				E27D7D347FBED981FC9274ED /* OnboardingVideoController.swift in Sources */,
 				7AC05ABE5736FC428CB4E965 /* OnboardingView.swift in Sources */,
+				B0597096F9D182E90C0A68D6 /* ParticleField.swift in Sources */,
+				7BA4729F27EDFE4BDF2A9B51 /* ParticleFieldView.swift in Sources */,
 				67D464B3644FBB0B9E1D0FE9 /* PatternView.swift in Sources */,
 				E74A4CDB4F839A1DA08A2FEE /* PaywallView.swift in Sources */,
 				DA97171DA24CFD9F4C2B87C7 /* QuestionCardView.swift in Sources */,
@@ -363,14 +399,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = A4FXWA835F;
 				INFOPLIST_FILE = BrainLaBomb/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brainla.bomb;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
@@ -447,14 +481,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = A4FXWA835F;
 				INFOPLIST_FILE = BrainLaBomb/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brainla.bomb;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;

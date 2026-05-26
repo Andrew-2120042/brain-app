@@ -1,0 +1,80 @@
+[
+  {
+    "type": "alive",
+    "startMs": 0,
+    "endMs": 10000,
+    "shapeTitle": "ChatGPT Image May 26, 2026 at 12_04_42 AM"
+  },
+  {
+    "type": "transition",
+    "startMs": 10000,
+    "endMs": 14000,
+    "shapeTitle": "ChatGPT Image May 26, 2026 at 12_04_42 AM → Neuron Network"
+  },
+  {
+    "type": "alive",
+    "startMs": 14000,
+    "endMs": 24000,
+    "shapeTitle": "Neuron Network"
+  },
+  {
+    "type": "transition",
+    "startMs": 24000,
+    "endMs": 28000,
+    "shapeTitle": "Neuron Network → Convergence"
+  },
+  {
+    "type": "alive",
+    "startMs": 28000,
+    "endMs": 38000,
+    "shapeTitle": "Convergence"
+  },
+  {
+    "type": "transition",
+    "startMs": 38000,
+    "endMs": 42000,
+    "shapeTitle": "Convergence → ChatGPT Image May 26, 2026 at 12_04_42 AM"
+  },
+  {
+    "type": "alive",
+    "startMs": 42000,
+    "endMs": 52000,
+    "shapeTitle": "ChatGPT Image May 26, 2026 at 12_04_42 AM"
+  },
+  {
+    "type": "transition",
+    "startMs": 52000,
+    "endMs": 56000,
+    "shapeTitle": "ChatGPT Image May 26, 2026 at 12_04_42 AM → ChatGPT Image May 26, 2026 at 12_04_42 AM"
+  },
+  {
+    "type": "alive",
+    "startMs": 56000,
+    "endMs": 66000,
+    "shapeTitle": "ChatGPT Image May 26, 2026 at 12_04_42 AM"
+  },
+  {
+    "type": "transition",
+    "startMs": 66000,
+    "endMs": 70000,
+    "shapeTitle": "ChatGPT Image May 26, 2026 at 12_04_42 AM → ChatGPT Image May 26, 2026 at 12_04_42 AM"
+  },
+  {
+    "type": "alive",
+    "startMs": 70000,
+    "endMs": 80000,
+    "shapeTitle": "ChatGPT Image May 26, 2026 at 12_04_42 AM"
+  },
+  {
+    "type": "transition",
+    "startMs": 80000,
+    "endMs": 84000,
+    "shapeTitle": "ChatGPT Image May 26, 2026 at 12_04_42 AM → image-6"
+  },
+  {
+    "type": "alive",
+    "startMs": 84000,
+    "endMs": 94000,
+    "shapeTitle": "image-6"
+  }
+]

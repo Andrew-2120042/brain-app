@@ -1,7 +1,7 @@
 # BrainLaBomb — Full Session Handoff
 
 **Project:** BrainLaBomb — iOS SwiftUI decision-making app  
-**Date of handoff:** 2026-05-17  
+**Date of handoff:** 2026-05-26  
 **Working directory:** `/Users/andrewwilson/my projects/brainlabomb`  
 **Xcode project:** `BrainLaBomb.xcodeproj` (generated via xcodegen from `project.yml`)  
 **Git remote:** `https://github.com/Andrew-2120042/brain-app.git`  
@@ -41,7 +41,10 @@ History panel shows all past thinks, tapping one reopens the card. Pattern ident
 | `HistoryPanelView.swift` | Slides in from left. Shows past thinks as cards. Tapping opens card + chat. Swipe right to close. |
 | `PatternView.swift` | Pattern identity reveal. Shown in stories as card 5/6. Also accessible from settings debug. |
 | `PaywallView.swift` | Paywall screen. Video background (`paywall_bg.mov`). Tappable Core/Pro plan cards. CTA text and fine print change based on selection. |
-| `OnboardingView.swift` | 10-screen onboarding with quiz, animated brain build, notifications request, inline paywall, and thank-you. Shows once on first launch. `hasCompletedOnboarding` in UserDefaults. Debug: Settings → debug → "replay onboarding". |
+| `OnboardingView.swift` | 12-screen onboarding with video background, quiz, animated brain build, notifications request, inline paywall, and thank-you. Shows once on first launch. `hasCompletedOnboarding` in UserDefaults. Debug: Settings → debug → "replay onboarding". Has `#if DEBUG` overlay: screen nav pill + BG toggle + screen size readout. |
+| `OnboardingVideoController.swift` | Manages the single persistent `AVPlayer` for onboarding. Parses `onboarding_timeline.json`, loops alive sections, plays transitions on Next tap, then loops next alive section. One player lives for the entire onboarding session. |
+| `onboarding_master_timeline.mp4` | Master onboarding video (in app bundle). 1290×2796 portrait, ~94s, 60fps. |
+| `onboarding_timeline.json` | Timeline JSON for the onboarding video. Array of `{type, startMs, endMs, shapeTitle}` objects. Types: `"alive"` (loops) and `"transition"` (plays once). |
 | `InputPageView.swift` | "What's on your mind?" text input screen. |
 | `QuestionCardView.swift` | Follow-up question screen. Appears only when firstPass says `needsQuestion: true`. |
 | `SimulatingView.swift` | Loading screen shown during API calls. |
@@ -395,6 +398,80 @@ Added silent Sonnet fallback to both `firstPass` and `secondPass` in `APIClient.
 
 **Badge behavior:** `DecisionCardView` already checks `result.modelUsed.contains("haiku")` — no change needed. Haiku path stamps `"claude-haiku-4-5-20251001"`, Sonnet fallback stamps `"claude-sonnet-4-20250514"`.
 
+### Phase 34 — Onboarding Particle System (Built then Replaced)
+
+Built a native Swift particle field system for the onboarding background:
+- `BrainLaBomb/Particles/ParticleField.swift` — force-based particle engine (curl noise, SDF brain attraction, dual attractors, inward spiral). 3,000 particles, CADisplayLink at 60fps, linear drag integration.
+- `BrainLaBomb/Particles/ParticleFieldView.swift` — SwiftUI Canvas renderer with perspective projection (cameraZ=260, fov=400) and depth-based alpha/size attenuation.
+- `BrainLaBomb/Particles/FieldNoise.swift` — SeededRNG, trig-based smooth noise, curl noise, brain SDF and normals.
+- `FieldState` enum maps each onboarding screen to a force configuration: dormant, expanding, signaling, conflict, compressing, forming, living, calming, fading.
+- This system was fully built and working. **Superseded by the video system in Phase 35 but files remain in the project.**
+
+### Phase 35 — Video-Based Onboarding System
+
+Replaced the particle system with a pre-rendered MP4 video + JSON timeline approach. The goal: deterministic cinematic particle morphing (matching the WebGL prototype's quality) without the compute cost.
+
+**Architecture:**
+- `OnboardingVideoController` — `ObservableObject` holding one persistent `AVPlayer`. Parses `onboarding_timeline.json` on init. Two modes: `loopAlive(at:)` uses `addBoundaryTimeObserver` to seek back to `startMs` when playback hits `endMs`. `playNextTransition(onScreenAdvance:)` stops the loop, calls `onScreenAdvance()` immediately (UI changes now, video plays behind), plays the transition, then at `endMs` calls `loopAlive` for the next alive segment.
+- `VideoPlayerView` — `UIViewRepresentable` wrapping `AVPlayerLayer` via `OnboardingPlayerHostView: UIView` with `layerClass = AVPlayerLayer.self`.
+- `OnboardingView` — replaced `@StateObject var particles = ParticleField()` with `@StateObject var video = OnboardingVideoController()`. Video plays fullscreen behind all UI content. `.onAppear { video.start() }` kicks off the first alive loop.
+
+**Key behaviour:**
+- ONE `AVPlayer` instance for the entire onboarding session. Never recreated, never reloaded.
+- Transitions: `onScreenAdvance` fires immediately on button tap → text cross-fades in → video transition plays behind new content.
+- After the last JSON segment, `playNextTransition` falls through and calls `onScreenAdvance()` immediately (no video change, the screen just advances).
+- All 6 main Next/continue buttons wired through `playNextTransition`. Auto-advances and paywall/done buttons use direct `currentScreen = N`.
+
+**JSON structure (onboarding_timeline.json):**
+```json
+[
+  { "type": "alive", "startMs": 0, "endMs": 10000, "shapeTitle": "..." },
+  { "type": "transition", "startMs": 10000, "endMs": 14000, "shapeTitle": "..." },
+  ...
+]
+```
+13 segments total: 7 alive (each 10s) + 6 transitions (each 4s) = 94s total.
+
+**Screen → video mapping:**
+| Screen | Alive loop | Transition on Next |
+|--------|-----------|-------------------|
+| 0 | 0–10000ms | 10000–14000ms |
+| 1 | 14000–24000ms | 24000–28000ms |
+| 2 (consent) | 28000–38000ms | 38000–42000ms |
+| 3 (quiz 1) | 42000–52000ms | 52000–56000ms |
+| 4 (quiz 2) | 56000–66000ms | 66000–70000ms |
+| 5 (quiz 3) | 70000–80000ms | 80000–84000ms |
+| 6+ | 84000–94000ms | none (falls through) |
+
+**Onboarding screen layout changes:**
+- Screen 0: text left-aligned, anchored to lower portion (single top `Spacer()` pushes text down). Empty upper area for video.
+- Screen 1: text left-aligned, top-anchored (`Spacer().frame(height: 24)` at top). Empty lower area.
+- Screen 2 (consent): same top-anchor pattern.
+
+**Text/copy updates:**
+- Proper sentence capitalisation throughout screens 0 and 1.
+- Screen 1 body: removed `\n\n` double line break, made single `\n` between "possible outcomes." and "Then handed back to you."
+- Button: "that's different" → "That's different".
+
+**Animation:**
+- Screen transitions: `.easeOut(duration: 1.0).delay(0.1)` on the ZStack.
+- Entry transition: `.asymmetric(insertion: .opacity.combined(with: .offset(y: 10)), removal: .opacity)` — text floats up 10pt while fading in, plain fade on exit.
+
+**Debug overlay (`#if DEBUG`):**
+- Screen nav pill: `‹ N / 12 ›` — bypasses video controller, directly sets `currentScreen`.
+- BG toggle: "BG ON/OFF" pill — hides `VideoPlayerView` for pure black background testing. Turns yellow when off.
+- Size readout: `WxH  T:top B:bottom` safe area insets in points.
+
+**Bundle files added:**
+- `BrainLaBomb/onboarding_master_timeline.mp4` — 266MB, 1290×2796 portrait, 94s
+- `BrainLaBomb/onboarding_timeline.json` — 13-segment timeline
+
+**Size note:** 266MB is too large for App Store. Before shipping: compress with H.265 (`ffmpeg -i input.mp4 -vcodec libx265 -crf 28 output.mp4`) or host remotely and download on first launch.
+
+### Phase 36 — Bonus: Intro Video Generator
+
+`/Users/andrewwilson/Downloads/generate_intro.py` — Python script that generates a 5-second 1920×1080 MP4 using Pillow + opencv. Animation: single "0" fades in → zooms to fill screen → dissolves into scattered BrainLaBomb-themed data (probability values, B/R/A/I/N letters, hex bytes, simulation counts) → data flood fills screen → fades to black. Output: `brainlabomb_intro.mp4`. Run with `python3 generate_intro.py`. Intended for launch screen / onboarding intro use.
+
 ### Phase 33 — Debug Defaults Changed
 
 - `AppViewModel.debugTier` default: `.free` → `.pro` (resets each launch — not persisted)
@@ -470,6 +547,9 @@ This file is in `.gitignore` and was NOT pushed.
 | Card float background | `float_bg` image in Assets |
 | Paywall video | `paywall_bg.mov` in bundle |
 | Onboarding flag | `UserDefaults "hasCompletedOnboarding"` |
+| Onboarding video | `onboarding_master_timeline.mp4` in bundle (266MB, 1290×2796, 94s) |
+| Onboarding timeline | `onboarding_timeline.json` in bundle (13 segments) |
+| Intro generator script | `/Users/andrewwilson/Downloads/generate_intro.py` |
 
 ---
 
@@ -487,13 +567,20 @@ This file is in `.gitignore` and was NOT pushed.
 
 ## Next Steps (What Was Being Worked On)
 
-The session ended after Phase 33 (debug defaults). Changes are NOT yet pushed — do not push until explicitly told.
+The session ended after Phase 36 (onboarding video system + intro generator). Changes are NOT yet pushed — do not push until explicitly told.
 
 The natural next actions are:
-1. Wire RevenueCat for real tier enforcement — paywall "start trial" / "get Core" buttons currently just advance to screen 9 with `TODO: RevenueCat` comments
-2. Build the actual purchase flow in PaywallView (standalone paywall, not just onboarding)
-3. Decide whether to port remaining Sonnet voice sections into Haiku (see "What Sonnet Has That Haiku Is Missing" above)
-4. Fix `mode` field decode to be case-insensitive (risk: "Emotional" vs "EMOTIONAL" crashes decode) — `DecisionMode` already handles this via custom `init(from:)` but verify in practice
-5. Fix `resetBrainMemory()` / `clearAllData()` to also clear `monthlyThinkCount` and `lastMonthlyReset`
-6. Add backend proxy for API key before App Store submission
-7. Test Sonnet fallback end-to-end: use CORRUPT button, verify SONNET badge appears, verify CORRUPT auto-resets
+
+**Onboarding video:**
+1. Compress `onboarding_master_timeline.mp4` before shipping — 266MB is too large. Use H.265: `ffmpeg -i onboarding_master_timeline.mp4 -vcodec libx265 -crf 28 -preset medium onboarding_compressed.mp4`. Target <60MB. OR host remotely and stream on first launch.
+2. Polish onboarding screen layouts for screens 3–11 now that the video system is wired.
+3. Map more onboarding screens to video segments as the video timeline grows.
+
+**Core app:**
+4. Wire RevenueCat for real tier enforcement — paywall "start trial" / "get Core" buttons currently just advance to screen 11 with `TODO: RevenueCat` comments.
+5. Build the actual purchase flow in PaywallView (standalone paywall, not just onboarding).
+6. Decide whether to port remaining Sonnet voice sections into Haiku (see "What Sonnet Has That Haiku Is Missing" above).
+7. Fix `mode` field decode to be case-insensitive (risk: "Emotional" vs "EMOTIONAL" crashes decode) — `DecisionMode` already handles this via custom `init(from:)` but verify in practice.
+8. Fix `resetBrainMemory()` / `clearAllData()` to also clear `monthlyThinkCount` and `lastMonthlyReset`.
+9. Add backend proxy for API key before App Store submission.
+10. Test Sonnet fallback end-to-end: use CORRUPT button, verify SONNET badge appears, verify CORRUPT auto-resets.
