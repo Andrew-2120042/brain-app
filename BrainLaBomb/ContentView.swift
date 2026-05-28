@@ -3,9 +3,6 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = AppViewModel()
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-    #if DEBUG
-    @AppStorage("useConversationalOnboarding") private var useConversational = true
-    #endif
 
     var body: some View {
         ZStack {
@@ -89,24 +86,10 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.35), value: screenKey)
         .fullScreenCover(isPresented: $showOnboarding, onDismiss: nil) {
-            #if DEBUG
-            if useConversational {
-                OnboardingConversationalView {
-                    UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-                    showOnboarding = false
-                }
-            } else {
-                OnboardingView {
-                    UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-                    showOnboarding = false
-                }
-            }
-            #else
-            OnboardingConversationalView {
+            OnboardingViewV2 {
                 UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
                 showOnboarding = false
             }
-            #endif
         }
         .transaction { transaction in
             transaction.disablesAnimations = true

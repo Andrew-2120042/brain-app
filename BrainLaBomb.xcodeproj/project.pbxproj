@@ -31,8 +31,8 @@
 		789BA3FE182B2FE80A114A2B /* LoopingVideoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E7DBB5A3EBD5DC8F2E9D84B /* LoopingVideoView.swift */; };
 		78E47B941548F3146066E917 /* onboarding_timeline.json in Resources */ = {isa = PBXBuildFile; fileRef = E3A6600CFA9727137C598DFF /* onboarding_timeline.json */; };
 		7AC05ABE5736FC428CB4E965 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28EB76498EA4328F1D51260D /* OnboardingView.swift */; };
+		D3E6F9B2C4A5072189E3F046 /* OnboardingViewV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2D5F8A1B3E4961078D2F935 /* OnboardingViewV2.swift */; };
 		7BA4729F27EDFE4BDF2A9B51 /* ParticleFieldView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E61AEAFF164DAD3ADF3AF0D /* ParticleFieldView.swift */; };
-		7CEC33950B72DF2ABB8B4B56 /* OnboardingConversationalView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 026139BADAD4577F9C9268CD /* OnboardingConversationalView.swift */; };
 		84DCF99223B103C10FBCC135 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7433B793F4F80856102E9C1 /* ChatView.swift */; };
 		87A7E6811FC63305244B2256 /* SimulatingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5350C3786E92E14442288B1 /* SimulatingView.swift */; };
 		8ACAADFB518146EF3E8A712A /* BrainLaBombApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 927C3FEC2688C66609FFD0D5 /* BrainLaBombApp.swift */; };
@@ -65,13 +65,13 @@
 
 /* Begin PBXFileReference section */
 		00B67017E45E4679936D713A /* StoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoriesView.swift; sourceTree = "<group>"; };
-		026139BADAD4577F9C9268CD /* OnboardingConversationalView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingConversationalView.swift; sourceTree = "<group>"; };
 		0E61AEAFF164DAD3ADF3AF0D /* ParticleFieldView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParticleFieldView.swift; sourceTree = "<group>"; };
 		119728EC6ED32122E09A3A98 /* paywall_bg.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = paywall_bg.mov; sourceTree = "<group>"; };
 		1522082A7DCA82ABFC56FED2 /* home_bg3.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = home_bg3.mp4; sourceTree = "<group>"; };
 		1757067727E2486455A3F932 /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
 		198E50DA2930E84EE182E354 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		28EB76498EA4328F1D51260D /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		C2D5F8A1B3E4961078D2F935 /* OnboardingViewV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewV2.swift; sourceTree = "<group>"; };
 		2C985A3C78686F01AB718A0F /* Poppins-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Poppins-Medium.ttf"; sourceTree = "<group>"; };
 		31DC7F0CFA9D84793AA45F49 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		329FDA547EC50E628C8CD747 /* FieldNoise.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FieldNoise.swift; sourceTree = "<group>"; };
@@ -189,9 +189,9 @@
 				D788A04806AD19CE0F6B19BE /* NotificationManager.swift */,
 				366033398DABC214435230EF /* onboarding_master_timeline.mp4 */,
 				E3A6600CFA9727137C598DFF /* onboarding_timeline.json */,
-				026139BADAD4577F9C9268CD /* OnboardingConversationalView.swift */,
 				CC470E32D20F8305EAC37D09 /* OnboardingVideoController.swift */,
 				28EB76498EA4328F1D51260D /* OnboardingView.swift */,
+				C2D5F8A1B3E4961078D2F935 /* OnboardingViewV2.swift */,
 				873F1E8A2C2DAAC84879244F /* PatternView.swift */,
 				119728EC6ED32122E09A3A98 /* paywall_bg.mov */,
 				198E50DA2930E84EE182E354 /* PaywallView.swift */,
@@ -318,9 +318,9 @@
 				789BA3FE182B2FE80A114A2B /* LoopingVideoView.swift in Sources */,
 				5D0BC68D1B0980ACC349D819 /* Models.swift in Sources */,
 				2F8B998BCD5ADF60F52B3ABE /* NotificationManager.swift in Sources */,
-				7CEC33950B72DF2ABB8B4B56 /* OnboardingConversationalView.swift in Sources */,
 				E27D7D347FBED981FC9274ED /* OnboardingVideoController.swift in Sources */,
 				7AC05ABE5736FC428CB4E965 /* OnboardingView.swift in Sources */,
+				D3E6F9B2C4A5072189E3F046 /* OnboardingViewV2.swift in Sources */,
 				B0597096F9D182E90C0A68D6 /* ParticleField.swift in Sources */,
 				7BA4729F27EDFE4BDF2A9B51 /* ParticleFieldView.swift in Sources */,
 				67D464B3644FBB0B9E1D0FE9 /* PatternView.swift in Sources */,
