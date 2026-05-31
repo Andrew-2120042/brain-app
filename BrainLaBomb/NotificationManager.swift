@@ -1,5 +1,12 @@
 import UserNotifications
 
+// TODO: Add scheduleTrialReminders(trialStartDate: Date) function
+// Schedules three local notifications automatically when trial begins:
+// +24 hours: "2 days left on your free trial."
+// +48 hours: "1 day left on your free trial."
+// +72 hours: "your free trial ends today. upgrade to keep going."
+// Call this from AppViewModel when RevenueCat confirms trial started.
+
 struct NotificationManager {
 
     static let shared = NotificationManager()

@@ -310,6 +310,61 @@ struct APIClient {
         }
     }
 
+    // MARK: - Pattern Reveal
+    func generatePatternReveal(
+        frequency: String,
+        blockers: [String],
+        duration: String,
+        currentState: String
+    ) async throws -> String {
+        let blockersText = blockers.isEmpty ? "unknown" : blockers.joined(separator: " and ")
+        let prompt = """
+        You are writing a pattern reveal for a decision-making app onboarding.
+
+        The user answered:
+        - How often they face decisions: \(frequency)
+        - What stops them trusting instincts: \(blockersText)
+        - How long sitting with decision: \(duration)
+        - Where they are right now: \(currentState)
+
+        Write exactly 4 lines. No more. No fewer.
+
+        Line 1: one trait observation using their frequency answer. Under 10 words. Start with "you".
+        Line 2: one trait observation using their blocker or duration answer. Under 10 words. Start with "you".
+        Line 3: one insight connecting both traits into a pattern they haven't named. Under 15 words. Do not start with "you".
+        Line 4: one reframe. Under 10 words. Does not start with "you". Relieves shame without dismissing reality.
+
+        Total word count across all 4 lines must be under 45 words.
+        No blank lines between lines.
+        No bullet points. No numbering. No labels.
+        Return only the 4 lines. Nothing else. No quotes. No explanation.
+        """
+
+        let body: [String: Any] = [
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 80,
+            "system": "You write precise personalised psychological pattern reveals for a decision-making app. Follow the structure given exactly. Never add extra content. Never use therapeutic language. Never use the word 'however'. Sound like a perceptive friend who sees patterns clearly.",
+            "messages": [
+                ["role": "user", "content": prompt]
+            ]
+        ]
+        return try await makeRequest(body: body)
+    }
+
+    // MARK: - Onboarding Reflection
+    func generateOnboardingReflection(selections: [String]) async throws -> String {
+        let selectionText = selections.joined(separator: " and ")
+        let body: [String: Any] = [
+            "model": "claude-haiku-4-5-20251001",
+            "max_tokens": 60,
+            "system": "You write one short sharp reflection for a decision-making app onboarding. Maximum 15 words. Second person. Period at end only. Sounds like a perceptive friend not a therapist. Return only the reflection. Nothing else. No quotes.",
+            "messages": [
+                ["role": "user", "content": "The user struggles with: \(selectionText). Write one reflection."]
+            ]
+        ]
+        return try await makeRequest(body: body)
+    }
+
     // MARK: - Core Request
     private func makeRequest(body: [String: Any]) async throws -> String {
         guard let url = URL(string: Constants.baseURL) else {
