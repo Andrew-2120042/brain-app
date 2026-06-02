@@ -19,10 +19,10 @@ private func videoURL(_ name: String) -> URL {
 
 // Per-layout video assignments
 private let videoA = Bundle.main.url(forResource: "card_a1", withExtension: "mov")!
-private let videoB = videoURL("cosmos_343223263")
-private let videoC = videoURL("cosmos_962608114")
-private let videoD = videoURL("cosmos_32819741")
-private let videoE = videoURL("cosmos_901376308")
+private let videoB = videoURL("ascii_export-3")
+private let videoC = Bundle.main.url(forResource: "loop_10s_hd-10", withExtension: "mov")!
+private let videoD = videoURL("loop_10s_hd-7")
+private let videoE = videoURL("1780313101639601")
 
 private struct VideoBlock: View {
     let url: URL

@@ -6,6 +6,7 @@ import UserNotifications
 // History fades upward. No pages. No screen switches.
 
 struct OnboardingViewV2: View {
+    var viewModel: AppViewModel
     var onComplete: () -> Void
 
     @State private var step = 0
@@ -34,9 +35,22 @@ struct OnboardingViewV2: View {
     @State private var patternRevealFailed: Bool = false
     @State private var patternDescriptionPhase: Int = 0
     @State private var patternContentAnimating: Bool = false
+    @State private var showBrandIntro: Bool = true
+    @State private var brandIntroPhase: Int = 0
+    @State private var bracketWordOpacity: Double = 0
+    @State private var typedBracketWord: String = ""
+    @State private var letterOpacities: [Double] = Array(repeating: 1.0, count: 7)
+    @State private var leftBracketOpacity: Double = 0
+    @State private var rightBracketOpacity: Double = 0
+    @State private var leftBracketX: CGFloat = -80
+    @State private var rightBracketX: CGFloat = 80
+    @State private var brandLogoScale: CGFloat = 1.0
+    @State private var brandLogoYOffset: CGFloat = 0
     @State private var selectedPlan: Int = 0
     @State private var buildProgress: CGFloat = 0
     @State private var buildDone = false
+    @State private var showPurchaseError = false
+    @State private var purchaseErrorMessage = ""
 
     @State private var blackPhase: Int = 0
     @State private var badNewsPhase: Int = 0
@@ -145,6 +159,7 @@ struct OnboardingViewV2: View {
     ]
 
     var body: some View {
+        ZStack {
         GeometryReader { geo in
             ZStack(alignment: .topLeading) {
                 Color.black.ignoresSafeArea()
@@ -193,7 +208,103 @@ struct OnboardingViewV2: View {
             }
             .animation(.easeInOut(duration: 0.45), value: step >= 12 && step <= 21)
         }
-        .onAppear { startTyping() }
+        .opacity(showBrandIntro ? 0 : 1)
+
+        // Persistent brackets — live above everything, animate into final top position
+        #if DEBUG
+        Button {
+            typedBracketWord = ""
+            bracketWordOpacity = 0
+            letterOpacities = Array(repeating: 1.0, count: 7)
+            leftBracketOpacity = 0
+            rightBracketOpacity = 0
+            leftBracketX = -80
+            rightBracketX = 80
+            brandLogoScale = 1.0
+            brandLogoYOffset = 0
+            showBrandIntro = true
+        } label: {
+            ZStack {
+                Color.clear.frame(width: 80, height: 80)
+                HStack(spacing: 0) {
+                    ForEach(Array(typedBracketWord.enumerated()), id: \.offset) { i, char in
+                        Text(String(char))
+                            .font(.custom("HelveticaNeue-Light", size: 20))
+                            .foregroundColor(.white)
+                            .opacity(i < letterOpacities.count ? letterOpacities[i] : 1.0)
+                    }
+                }
+                .opacity(bracketWordOpacity)
+                Text("[")
+                    .font(.custom("HelveticaNeue-Light", size: 32))
+                    .foregroundColor(.white)
+                    .opacity(leftBracketOpacity)
+                    .offset(x: leftBracketX)
+                Text("]")
+                    .font(.custom("HelveticaNeue-Light", size: 32))
+                    .foregroundColor(.white)
+                    .opacity(rightBracketOpacity)
+                    .offset(x: rightBracketX)
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+        .scaleEffect(brandLogoScale)
+        .offset(y: brandLogoYOffset)
+        .opacity(step == 19 ? 0 : 1)
+        .zIndex(200)
+        #else
+        ZStack {
+            HStack(spacing: 0) {
+                ForEach(Array(typedBracketWord.enumerated()), id: \.offset) { i, char in
+                    Text(String(char))
+                        .font(.custom("HelveticaNeue-Light", size: 20))
+                        .foregroundColor(.white)
+                        .opacity(i < letterOpacities.count ? letterOpacities[i] : 1.0)
+                }
+            }
+            .opacity(bracketWordOpacity)
+            Text("[")
+                .font(.custom("HelveticaNeue-Light", size: 32))
+                .foregroundColor(.white)
+                .opacity(leftBracketOpacity)
+                .offset(x: leftBracketX)
+            Text("]")
+                .font(.custom("HelveticaNeue-Light", size: 32))
+                .foregroundColor(.white)
+                .opacity(rightBracketOpacity)
+                .offset(x: rightBracketX)
+        }
+        .allowsHitTesting(false)
+        .scaleEffect(brandLogoScale)
+        .offset(y: brandLogoYOffset)
+        .opacity(step == 19 ? 0 : 1)
+        .zIndex(200)
+        #endif
+
+        if showBrandIntro {
+            brandIntroView
+                .transition(.opacity)
+                .zIndex(100)
+        }
+
+        #if DEBUG
+        VStack(spacing: 10) {
+            Button("→ home") { onComplete() }
+            Button("→ paywall") { showBrandIntro = false; step = 19 }
+        }
+        .font(.custom("HelveticaNeue", size: 11))
+        .foregroundColor(Color(white: 0.28))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .padding(.bottom, 52)
+        .allowsHitTesting(true)
+        .zIndex(300)
+        #endif
+
+        }
+        .animation(.easeInOut(duration: 0.5), value: showBrandIntro)
+        .onChange(of: showBrandIntro) { newValue in
+            if !newValue { startTyping() }
+        }
     }
 
     // MARK: - Step content
@@ -1310,7 +1421,24 @@ struct OnboardingViewV2: View {
                 }
                 .padding(.top, 12)
 
-                Button { advanceNoHistory() } label: {
+                Button {
+                    Task {
+                        let productId = selectedPlan == 0 ? "com.brainla.bomb.pro.annual" : "com.brainla.bomb.core.sixmonths"
+                        if let package = viewModel.currentOffering?.availablePackages.first(where: {
+                            $0.storeProduct.productIdentifier == productId
+                        }) {
+                            await viewModel.purchase(package: package)
+                            if viewModel.purchasedTier != .free {
+                                advanceNoHistory()
+                            }
+                        } else {
+                            await MainActor.run {
+                                purchaseErrorMessage = "Unable to load subscription. Please try again."
+                                showPurchaseError = true
+                            }
+                        }
+                    }
+                } label: {
                     Text("start my free trial")
                         .font(.custom("HelveticaNeue-Bold", size: 17))
                         .foregroundColor(.white)
@@ -1338,7 +1466,19 @@ struct OnboardingViewV2: View {
                         if let u = URL(string: "https://creative-sailfish-dc6.notion.site/Terms-and-conditions-3647cd351f5b8000b482d1062d00f0ad") { UIApplication.shared.open(u) }
                     } label: { Text("Terms & Privacy").font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.28)) }
                     .buttonStyle(PlainButtonStyle())
-                    Button {} label: {
+                    Button {
+                        Task {
+                            await viewModel.restorePurchases()
+                            if viewModel.purchasedTier != .free {
+                                advanceNoHistory()
+                            } else {
+                                await MainActor.run {
+                                    purchaseErrorMessage = "No active subscription found for this Apple ID."
+                                    showPurchaseError = true
+                                }
+                            }
+                        }
+                    } label: {
                         Text("Restore").font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.28))
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -1353,6 +1493,16 @@ struct OnboardingViewV2: View {
             }
             .padding(.horizontal, 28)
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .onAppear {
+            Task {
+                await viewModel.fetchOfferings()
+            }
+        }
+        .alert("Purchase Failed", isPresented: $showPurchaseError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(purchaseErrorMessage)
         }
     }
 
@@ -1752,6 +1902,74 @@ struct OnboardingViewV2: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 6.7) {
                 withAnimation(.easeIn(duration: 0.6)) { goodNewsPhase = 5 }
             }
+        }
+    }
+
+    // MARK: - Brand Intro
+
+    private var brandIntroView: some View {
+        GeometryReader { geo in
+            Color.black.ignoresSafeArea()
+                .onAppear { startBrandIntroAnimation(screenHeight: geo.size.height) }
+        }
+    }
+
+    private func startBrandIntroAnimation(screenHeight: CGFloat) {
+        bracketWordOpacity = 1.0
+        letterOpacities = Array(repeating: 1.0, count: 7)
+
+        // Phase 0 — typewriter: type "Bracket" char by char (slow)
+        let word = Array("Bracket")
+        for (i, char) in word.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.11) {
+                typedBracketWord.append(char)
+            }
+        }
+        // last char at 6 × 0.11 = 0.66s
+
+        // Phase 1 — random per-letter blink flicker (starts 0.85s, 18 blinks)
+        for i in 0..<18 {
+            let delay = 0.85 + Double(i) * 0.07
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                let idx = Int.random(in: 0..<7)
+                withAnimation(.linear(duration: 0.03)) { letterOpacities[idx] = 0.05 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                    withAnimation(.linear(duration: 0.03)) { letterOpacities[idx] = 1.0 }
+                }
+            }
+        }
+        // flicker ends around 0.85 + 17×0.07 = 2.04s
+
+        // Phase 2 — brackets slide in close to the name (2.2s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+            withAnimation(.easeInOut(duration: 0.4)) {
+                leftBracketOpacity = 1.0
+                leftBracketX = -44
+                rightBracketOpacity = 1.0
+                rightBracketX = 44
+            }
+        }
+
+        // Phase 3 — "Bracket" fades, brackets close to [ ] (3.3s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.3) {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                bracketWordOpacity = 0
+                leftBracketX = -14
+                rightBracketX = 14
+            }
+        }
+
+        // Phase 4 — shrinks slightly, settles just below safe area (3.9s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.9) {
+            withAnimation(.easeInOut(duration: 0.5)) {
+                brandLogoScale = 0.72
+                brandLogoYOffset = -(screenHeight * 0.47)
+            }
+        }
+
+        // Complete (4.4s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.4) {
+            showBrandIntro = false
         }
     }
 

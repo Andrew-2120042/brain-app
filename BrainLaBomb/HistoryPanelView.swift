@@ -151,12 +151,6 @@ struct HistoryPanelView: View {
                     Text("confidence")
                         .font(.custom("Poppins-Regular", size: 10))
                         .foregroundColor(Color(hex: "#444444"))
-                    if !think.chatMessages.filter({ !$0.isContextCard }).isEmpty {
-                        Text("chat saved")
-                            .font(.system(size: 10, weight: .regular))
-                            .foregroundColor(Color(white: 0.35))
-                            .padding(.top, 2)
-                    }
                 }
             }
         }

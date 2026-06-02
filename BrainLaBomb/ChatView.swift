@@ -416,13 +416,12 @@ struct ChatView: View {
             "messages": apiMessages
         ]
 
-        guard let url = URL(string: Constants.baseURL) else { throw APIError.invalidResponse }
+        let url = URL(string: "https://bracket-api.godiandrewwilson.workers.dev")!
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(Constants.apiKey, forHTTPHeaderField: "x-api-key")
-        request.setValue(Constants.anthropicVersion, forHTTPHeaderField: "anthropic-version")
+        request.setValue(Constants.appToken, forHTTPHeaderField: "x-app-token")
         request.timeoutInterval = 30
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 

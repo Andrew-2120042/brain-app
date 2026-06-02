@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import UIKit
+import RevenueCat
 
 enum AppState {
     case home
@@ -58,9 +59,19 @@ class AppViewModel: ObservableObject {
     // MARK: - Tier Management
 
     // TODO: replace with RevenueCat check when integrated
-    @Published var debugTier: AppTier = .pro
+    @Published var debugTier: AppTier = .free
 
-    var currentTier: AppTier { debugTier }
+    @Published var purchasedTier: AppTier = .free
+    @Published var isLoadingPurchase: Bool = false
+    @Published var currentOffering: Offering? = nil
+
+    var currentTier: AppTier {
+        #if DEBUG
+        return debugTier
+        #else
+        return purchasedTier
+        #endif
+    }
 
     var coreThinksUsed: Int {
         get { UserDefaults.standard.integer(forKey: "coreThinksUsed") }
@@ -165,6 +176,61 @@ class AppViewModel: ObservableObject {
 
     var shouldUseHaiku: Bool { return true }
 
+    // MARK: - RevenueCat
+    func checkSubscriptionStatus() async {
+        do {
+            let customerInfo = try await Purchases.shared.customerInfo()
+            await MainActor.run {
+                if customerInfo.entitlements["pro"]?.isActive == true {
+                    self.purchasedTier = .pro
+                } else if customerInfo.entitlements["core"]?.isActive == true {
+                    self.purchasedTier = .core
+                } else {
+                    self.purchasedTier = .free
+                }
+            }
+        } catch {}
+    }
+
+    func fetchOfferings() async {
+        do {
+            let offerings = try await Purchases.shared.offerings()
+            await MainActor.run {
+                self.currentOffering = offerings.current
+            }
+        } catch {}
+    }
+
+    func purchase(package: Package) async {
+        await MainActor.run { isLoadingPurchase = true }
+        do {
+            let result = try await Purchases.shared.purchase(package: package)
+            await MainActor.run {
+                isLoadingPurchase = false
+                if result.customerInfo.entitlements["pro"]?.isActive == true {
+                    self.purchasedTier = .pro
+                } else if result.customerInfo.entitlements["core"]?.isActive == true {
+                    self.purchasedTier = .core
+                }
+            }
+        } catch {
+            await MainActor.run { isLoadingPurchase = false }
+        }
+    }
+
+    func restorePurchases() async {
+        do {
+            let customerInfo = try await Purchases.shared.restorePurchases()
+            await MainActor.run {
+                if customerInfo.entitlements["pro"]?.isActive == true {
+                    self.purchasedTier = .pro
+                } else if customerInfo.entitlements["core"]?.isActive == true {
+                    self.purchasedTier = .core
+                }
+            }
+        } catch {}
+    }
+
     // MARK: - Init
     init() {
         loadHistory()
@@ -181,7 +247,7 @@ class AppViewModel: ObservableObject {
         appState = .processingFirst
 
         // TODO: RENAME — replace with final app name before App Store submission
-        let bgTask = UIApplication.shared.beginBackgroundTask(withName: "vael.think", expirationHandler: nil)
+        let bgTask = UIApplication.shared.beginBackgroundTask(withName: "bracket.think", expirationHandler: nil)
 
         currentTask = Task {
             do {
@@ -224,7 +290,7 @@ class AppViewModel: ObservableObject {
         appState = .processingSecond
 
         // TODO: RENAME — replace with final app name before App Store submission
-        let bgTask = UIApplication.shared.beginBackgroundTask(withName: "vael.think", expirationHandler: nil)
+        let bgTask = UIApplication.shared.beginBackgroundTask(withName: "bracket.think", expirationHandler: nil)
 
         currentTask = Task {
             await runSecondPass(answer: answer)
@@ -352,9 +418,7 @@ class AppViewModel: ObservableObject {
             if let newPattern = try await APIClient.shared.analyzePattern(thinkHistory: thinkHistory) {
                 await MainActor.run { patternData = newPattern }
             }
-        } catch {
-            print("Pattern analysis failed: \(error)")
-        }
+        } catch {}
     }
 
     func refreshPatternIfNeeded() {

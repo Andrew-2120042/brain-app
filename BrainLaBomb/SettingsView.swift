@@ -38,7 +38,7 @@ struct SettingsView: View {
             }
         }
         .onAppear { checkNotificationStatus() }
-        .sheet(isPresented: $showPaywall) { PaywallView() }
+        .sheet(isPresented: $showPaywall) { PaywallView(viewModel: viewModel) }
     }
 
     // MARK: - Header
@@ -244,6 +244,10 @@ struct SettingsView: View {
                 UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
                 NotificationCenter.default.post(name: .replayOnboarding, object: nil)
                 dismiss()
+            })
+            settingsRow(label: "test loading screen", action: {
+                dismiss()
+                viewModel.appState = .processingFirst
             })
             HStack {
                 Text("conversational onboarding")

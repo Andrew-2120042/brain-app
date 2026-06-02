@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import RevenueCat
 
 class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     static let shared = NotificationDelegate()
@@ -18,6 +19,8 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
 struct BrainLaBombApp: App {
     init() {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+        Purchases.logLevel = .error
+        Purchases.configure(withAPIKey: "appl_wxvcKxKidfnfbBJkrkKgKwfkmMI")
     }
 
     var body: some Scene {

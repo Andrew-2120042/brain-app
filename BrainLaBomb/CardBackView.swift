@@ -232,7 +232,7 @@ struct CardBackView: View {
             )
         }
         .fullScreenCover(isPresented: $showPaywall) {
-            PaywallView()
+            PaywallView(viewModel: viewModel)
         }
         .fullScreenCover(isPresented: $showChat) {
             ChatView(

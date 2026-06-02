@@ -6,13 +6,16 @@ struct HomeView: View {
     let onChatMessagesUpdated: (UUID, [ChatBubble]) -> Void
     let onTap: () -> Void
 
-    @State private var homeVersion: Int = 0
+    @State private var homeVersion: Int = 1
     @State private var showHistory = false
     @State private var showSettings = false
     @State private var historyDragOffset: CGFloat = 0
 
-    private let bgURL  = Bundle.main.url(forResource: "home_bg",  withExtension: "mp4")!
-    private let bgURL5 = Bundle.main.url(forResource: "home_bg5", withExtension: "mp4")!
+    private let bgURL2 = Bundle.main.url(forResource: "ascii_export-2", withExtension: "mp4")!
+    #if DEBUG
+    private let bgURL  = Bundle.main.url(forResource: "home_bg",       withExtension: "mp4")!
+    private let bgURL5 = Bundle.main.url(forResource: "home_bg5",      withExtension: "mp4")!
+    #endif
 
     private var historyXOffset: CGFloat {
         let sw = UIScreen.main.bounds.width
@@ -69,11 +72,17 @@ struct HomeView: View {
     private var homeScreen: some View {
         ZStack {
             Color.black.ignoresSafeArea()
+            #if DEBUG
             if homeVersion == 0 {
                 LoopingVideoView(url: bgURL).ignoresSafeArea().scaleEffect(1.35)
+            } else if homeVersion == 1 {
+                LoopingVideoView(url: bgURL2).ignoresSafeArea().scaleEffect(1.35)
             } else {
                 LoopingVideoView(url: bgURL5).ignoresSafeArea().scaleEffect(1.35)
             }
+            #else
+            LoopingVideoView(url: bgURL2).ignoresSafeArea().scaleEffect(1.35)
+            #endif
 
             version1
 
@@ -99,8 +108,9 @@ struct HomeView: View {
                             .frame(width: 44, height: 44)
                     }
 
+                    #if DEBUG
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { homeVersion = (homeVersion + 1) % 2 }
+                        withAnimation(.easeInOut(duration: 0.2)) { homeVersion = (homeVersion + 1) % 3 }
                     } label: {
                         Text("v\(homeVersion + 1)")
                             .font(.system(size: 11, weight: .medium, design: .monospaced))
@@ -130,6 +140,7 @@ struct HomeView: View {
                             .padding(.horizontal, 10).padding(.vertical, 5)
                             .background(Color(white: 0.12).clipShape(Capsule()))
                     }
+                    #endif
                 }
                 .padding(.top, 0)
                 .padding(.horizontal, 16)

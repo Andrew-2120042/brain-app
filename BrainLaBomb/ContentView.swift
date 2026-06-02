@@ -54,7 +54,7 @@ struct ContentView: View {
                 .transition(.opacity)
 
             case .paywallRequired:
-                PaywallView(onDismiss: {
+                PaywallView(viewModel: viewModel, onDismiss: {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         viewModel.appState = .home
                     }
@@ -86,13 +86,19 @@ struct ContentView: View {
         }
         .animation(.easeInOut(duration: 0.35), value: screenKey)
         .fullScreenCover(isPresented: $showOnboarding, onDismiss: nil) {
-            OnboardingViewV2 {
+            OnboardingViewV2(viewModel: viewModel) {
                 UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
                 showOnboarding = false
             }
         }
         .transaction { transaction in
             transaction.disablesAnimations = true
+        }
+        .onAppear {
+            Task {
+                await viewModel.checkSubscriptionStatus()
+                await viewModel.fetchOfferings()
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .replayOnboarding)) { _ in
             showOnboarding = true

@@ -3,10 +3,8 @@ import Foundation
 enum Constants {
 
     // MARK: - API
-    static let apiKey = Secrets.anthropicAPIKey
-    static let baseURL = "https://api.anthropic.com/v1/messages"
+    static let appToken = "f8a3d2e1-9b4c-4f7a-8e6d-2c1a5b9f3d7e"
     static let model = "claude-sonnet-4-20250514"
-    static let anthropicVersion = "2023-06-01"
 
     // MARK: - Debug
     static var useMockData: Bool {

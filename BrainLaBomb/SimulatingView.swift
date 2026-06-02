@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SimulatingView: View {
-    private let videoURL = Bundle.main.url(forResource: "cosmos_2032149229", withExtension: "mp4")!
+    private let videoURL = Bundle.main.url(forResource: "loop_10s_hd-4", withExtension: "mp4")!
 
     var body: some View {
         ZStack {
@@ -20,9 +20,9 @@ struct SimulatingView: View {
                 Spacer()
 
                 // ── Sphere animation ──────────────────────────────────────────
-                LoopingVideoView(url: videoURL, gravity: .resizeAspect)
-                    .frame(width: 320, height: 320)
+                LoopingVideoView(url: videoURL, gravity: .resizeAspectFill)
                     .frame(maxWidth: .infinity)
+                    .ignoresSafeArea()
 
                 Spacer()
 

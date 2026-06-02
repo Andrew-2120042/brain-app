@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct PaywallView: View {
+    @ObservedObject var viewModel: AppViewModel
     var onDismiss: (() -> Void)? = nil
     @Environment(\.dismiss) private var dismiss
     @State private var selectedPlan: Int = 1
     @State private var dragOffset: CGFloat = 0
-    @State private var showTrialSheet = false
+    @State private var showPurchaseError = false
+    @State private var purchaseErrorMessage = ""
 
     private var paywallVideoURL: URL? {
         Bundle.main.url(forResource: "paywall_bg", withExtension: "mov")
@@ -74,19 +76,36 @@ struct PaywallView: View {
                 Spacer()
 
                 VStack(spacing: 10) {
-                    paywallPlanCard(index: 0, title: "CORE", price: "$39.99", subtitle: "500 thinks · 6 months", detail: "everything unlocked", isProBadge: false)
+                    paywallPlanCard(index: 0, title: "CORE", price: "$59.99", subtitle: "500 thinks · 6 months", detail: "everything unlocked", isProBadge: false)
                     paywallPlanCard(index: 1, title: "PRO", price: "$99.99/year", subtitle: "unlimited thinks", detail: "chat + full memory", isProBadge: true)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
 
-                Button {
-                    if selectedPlan == 1 {
-                        showTrialSheet = true
+                Button(action: {
+                    Task {
+                        if selectedPlan == 1 {
+                            if let package = viewModel.currentOffering?.availablePackages.first(where: {
+                                $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual"
+                            }) {
+                                await viewModel.purchase(package: package)
+                            } else {
+                                purchaseErrorMessage = "Unable to load subscription. Please try again."
+                                showPurchaseError = true
+                            }
+                        } else {
+                            if let package = viewModel.currentOffering?.availablePackages.first(where: {
+                                $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths"
+                            }) {
+                                await viewModel.purchase(package: package)
+                            } else {
+                                purchaseErrorMessage = "Unable to load subscription. Please try again."
+                                showPurchaseError = true
+                            }
+                        }
                     }
-                    // TODO: RevenueCat purchase call for Core
-                } label: {
-                    Text(selectedPlan == 0 ? "get Core — $39.99" : "start my 3-day free trial")
+                }) {
+                    Text(selectedPlan == 0 ? "get Core — $59.99" : "start my 3-day free trial")
                         .font(.custom("HelveticaNeue", size: 17))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
@@ -94,13 +113,22 @@ struct PaywallView: View {
                         .background(Color.white)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
+                .disabled(viewModel.isLoadingPurchase)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 12)
 
                 HStack(spacing: 16) {
-                    Button {
-                        // TODO: RevenueCat restore
-                    } label: {
+                    Button(action: {
+                        Task {
+                            await viewModel.restorePurchases()
+                            if viewModel.purchasedTier == .free {
+                                await MainActor.run {
+                                    purchaseErrorMessage = "No active subscription found for this Apple ID."
+                                    showPurchaseError = true
+                                }
+                            }
+                        }
+                    }) {
                         Text("restore purchase")
                             .font(.custom("HelveticaNeue", size: 12))
                             .foregroundColor(Color(white: 0.3))
@@ -134,15 +162,12 @@ struct PaywallView: View {
                         .foregroundColor(Color(white: 0.3))
                         .padding(.bottom, 32)
                 } else {
-                    Text("$39.99 one-time purchase. No subscription.")
+                    Text("$59.99 every 6 months. Cancel anytime.")
                         .font(.custom("HelveticaNeue", size: 11))
                         .foregroundColor(Color(white: 0.3))
                         .padding(.bottom, 32)
                 }
             }
-        }
-        .sheet(isPresented: $showTrialSheet) {
-            TrialStartSheet()
         }
         .offset(y: dragOffset)
         .gesture(
@@ -168,6 +193,33 @@ struct PaywallView: View {
                     }
                 }
         )
+        .overlay {
+            if viewModel.isLoadingPurchase {
+                ZStack {
+                    Color.black.opacity(0.5)
+                        .ignoresSafeArea()
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(1.5)
+                }
+            }
+        }
+        .onAppear {
+            Task {
+                await viewModel.fetchOfferings()
+            }
+        }
+        .alert("Purchase Failed", isPresented: $showPurchaseError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(purchaseErrorMessage)
+        }
+        .onChange(of: viewModel.purchasedTier) { newTier in
+            if newTier != .free {
+                onDismiss?()
+                dismiss()
+            }
+        }
     }
 
     private func paywallPlanCard(index: Int, title: String, price: String, subtitle: String, detail: String, isProBadge: Bool) -> some View {
@@ -244,126 +296,3 @@ struct PaywallView: View {
     }
 }
 
-// MARK: - Trial Start Sheet
-
-struct TrialStartSheet: View {
-    @Environment(\.dismiss) private var dismiss
-
-    private var billingDate: String {
-        let date = Calendar.current.date(byAdding: .day, value: 3, to: Date()) ?? Date()
-        let f = DateFormatter()
-        f.dateFormat = "MMM d, yyyy"
-        return f.string(from: date)
-    }
-
-    var body: some View {
-        ZStack {
-            Color.black.ignoresSafeArea()
-
-            VStack(alignment: .leading, spacing: 0) {
-
-                HStack {
-                    Spacer()
-                    Button { dismiss() } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundColor(Color(white: 0.4))
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 24)
-
-                Text("start your\n3-day free trial.")
-                    .font(.custom("HelveticaNeue", size: 34))
-                    .foregroundColor(.white)
-                    .lineSpacing(4)
-                    .padding(.horizontal, 24)
-                    .padding(.top, 36)
-                    .padding(.bottom, 52)
-
-                VStack(alignment: .leading, spacing: 0) {
-                    trialStep(icon: "lock.open.fill",
-                              title: "today",
-                              subtitle: "everything unlocks the moment you start.",
-                              isLast: false)
-                    trialStep(icon: "bell.fill",
-                              title: "in 2 days — reminder",
-                              subtitle: "we'll let you know before your trial ends.",
-                              isLast: false)
-                    trialStep(icon: "creditcard.fill",
-                              title: "in 3 days — billing starts",
-                              subtitle: "you'll be charged on \(billingDate) unless you cancel before.",
-                              isLast: true)
-                }
-                .padding(.horizontal, 24)
-
-                Spacer()
-
-                HStack(spacing: 8) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundColor(Color(white: 0.4))
-                    Text("no payment due now.")
-                        .font(.custom("HelveticaNeue", size: 14))
-                        .foregroundColor(Color(white: 0.4))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.bottom, 20)
-
-                Button {
-                    // TODO: RevenueCat purchase call
-                    dismiss()
-                } label: {
-                    Text("start my 3-day free trial")
-                        .font(.custom("HelveticaNeue", size: 17))
-                        .foregroundColor(.black)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 18)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 12)
-
-                Text("3 days free, then $99.99/year. Cancel anytime.")
-                    .font(.custom("HelveticaNeue", size: 11))
-                    .foregroundColor(Color(white: 0.3))
-                    .frame(maxWidth: .infinity)
-                    .padding(.bottom, 40)
-            }
-        }
-    }
-
-    private func trialStep(icon: String, title: String, subtitle: String, isLast: Bool) -> some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(spacing: 0) {
-                ZStack {
-                    Circle()
-                        .stroke(Color(white: 0.22), lineWidth: 1)
-                        .frame(width: 36, height: 36)
-                    Image(systemName: icon)
-                        .font(.system(size: 13))
-                        .foregroundColor(.white)
-                }
-                if !isLast {
-                    Rectangle()
-                        .fill(Color(white: 0.12))
-                        .frame(width: 1, height: 48)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 5) {
-                Text(title)
-                    .font(.custom("HelveticaNeue", size: 15))
-                    .foregroundColor(.white)
-                Text(subtitle)
-                    .font(.custom("HelveticaNeue", size: 13))
-                    .foregroundColor(Color(white: 0.4))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(.top, 7)
-
-            Spacer()
-        }
-    }
-}

@@ -1,0 +1,91 @@
+{
+  "identifier" : "Products",
+  "nonConsumableProducts" : [
+
+  ],
+  "nonRenewingSubscriptionProducts" : [
+
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0,
+    "patch" : 0
+  },
+  "autoRenewableSubscriptionProducts" : [
+    {
+      "adHocOffers" : [
+
+      ],
+      "displayPrice" : "99.99",
+      "familyShareable" : false,
+      "groupNumber" : 1,
+      "internalID" : "A1B2C3D4-0001-0001-0001-000000000001",
+      "introductoryOffer" : {
+        "duration" : 1,
+        "durationUnit" : "WEEK",
+        "numberOfPeriods" : 1,
+        "offerIdentifier" : "free_trial_1_week",
+        "offerMode" : "FREE_TRIAL",
+        "periodUnit" : "WEEK"
+      },
+      "localizations" : [
+        {
+          "description" : "Unlimited thinks, chat, and full memory.",
+          "displayName" : "Bracket Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.brainla.bomb.pro.annual",
+      "recurringSubscriptionPeriod" : "P1Y",
+      "referenceName" : "Bracket Pro",
+      "subscriptionGroupID" : "A1B2C3D4-0001-0001-0001-000000000010",
+      "type" : "RecurringSubscription"
+    },
+    {
+      "adHocOffers" : [
+
+      ],
+      "displayPrice" : "59.99",
+      "familyShareable" : false,
+      "groupNumber" : 2,
+      "internalID" : "A1B2C3D4-0002-0002-0002-000000000002",
+      "introductoryOffer" : null,
+      "localizations" : [
+        {
+          "description" : "500 thinks over 6 months.",
+          "displayName" : "Bracket Core",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.brainla.bomb.core.sixmonths",
+      "recurringSubscriptionPeriod" : "P6M",
+      "referenceName" : "Bracket Core",
+      "subscriptionGroupID" : "A1B2C3D4-0002-0002-0002-000000000020",
+      "type" : "RecurringSubscription"
+    }
+  ],
+  "consumableProducts" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "000000000",
+    "_developerTeamID" : "",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Restore Purchases"
+      }
+    ]
+  }
+}

@@ -319,7 +319,7 @@ struct StoriesView: View {
         )
         .onAppear { startProgress() }
         .onDisappear { stopTimer() }
-        .fullScreenCover(isPresented: $showPaywall) { PaywallView() }
+        .fullScreenCover(isPresented: $showPaywall) { PaywallView(viewModel: viewModel) }
     }
 
     // ── Tap zone helper ───────────────────────────────────────────────────────

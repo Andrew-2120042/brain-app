@@ -367,16 +367,11 @@ struct APIClient {
 
     // MARK: - Core Request
     private func makeRequest(body: [String: Any]) async throws -> String {
-        guard let url = URL(string: Constants.baseURL) else {
-            throw APIError.invalidResponse
-        }
-
+        let url = URL(string: "https://bracket-api.godiandrewwilson.workers.dev")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue(Constants.apiKey, forHTTPHeaderField: "x-api-key")
-        request.setValue(Constants.anthropicVersion, forHTTPHeaderField: "anthropic-version")
-        request.setValue("prompt-caching-2024-07-31", forHTTPHeaderField: "anthropic-beta")
+        request.setValue(Constants.appToken, forHTTPHeaderField: "x-app-token")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
         let data: Data

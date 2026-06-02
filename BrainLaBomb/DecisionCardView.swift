@@ -183,21 +183,6 @@ struct DecisionCardView: View {
                 .opacity(frontVisible ? 0 : 1)
 
             DecisionCard(result: result, layoutIndex: layoutIndex)
-                .overlay(alignment: .bottomTrailing) {
-                    #if DEBUG
-                    VStack(alignment: .trailing, spacing: 2) {
-                        let isHaiku = result.modelUsed.contains("haiku")
-                        Text(isHaiku ? "HAIKU" : "SONNET")
-                            .foregroundColor(isHaiku ? .orange : Color(white: 0.45))
-                        Text(viewModel.debugTier == .free ? "FREE" : viewModel.debugTier == .core ? "CORE" : "PRO")
-                            .foregroundColor(viewModel.debugTier == .free ? Color(white: 0.4) : viewModel.debugTier == .core ? .blue : .green)
-                    }
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
-                    .opacity(0.7)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                    #endif
-                }
                 .overlay(RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
                 .rotation3DEffect(.degrees(cardAngle), axis: (0, 1, 0), perspective: 1.1)
