@@ -250,6 +250,18 @@ struct SettingsView: View {
                 viewModel.appState = .processingFirst
             })
             HStack {
+                Text("hide debug UI")
+                    .font(.system(size: 15, weight: .regular))
+                    .foregroundColor(.white)
+                Spacer()
+                Toggle("", isOn: $viewModel.hideDebugUI)
+                    .labelsHidden()
+                    .tint(Color.white)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 14)
+
+            HStack {
                 Text("conversational onboarding")
                     .font(.system(size: 15, weight: .regular))
                     .foregroundColor(.white)
@@ -260,6 +272,7 @@ struct SettingsView: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 14)
+
         }
     }
     #endif

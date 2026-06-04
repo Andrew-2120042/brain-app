@@ -71,7 +71,9 @@ struct DecisionCardView: View {
                     .foregroundColor(.white.opacity(0.3))
                     .tracking(1).lineSpacing(3)
                     .padding(.leading, 44).padding(.trailing, 24).padding(.bottom, 12)
-                debugBar.padding(.bottom, 48)
+                #if DEBUG
+                if !viewModel.hideDebugUI { debugBar.padding(.bottom, 48) }
+                #endif
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }

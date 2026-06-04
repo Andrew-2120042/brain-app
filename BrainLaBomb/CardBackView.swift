@@ -160,15 +160,17 @@ struct CardBackView: View {
                 // ── Fixed buttons ─────────────────────────────────
                 VStack(spacing: 8) {
                     #if DEBUG
-                    Button { debugForceVerdict.toggle() } label: {
-                        Text("VERB")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundColor(debugForceVerdict ? Color.black : Color(white: 0.55))
-                            .frame(width: 50, height: 28)
-                            .background(debugForceVerdict ? Color.white : Color(white: 0.14))
-                            .clipShape(Capsule())
+                    if !viewModel.hideDebugUI {
+                        Button { debugForceVerdict.toggle() } label: {
+                            Text("VERB")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(debugForceVerdict ? Color.black : Color(white: 0.55))
+                                .frame(width: 50, height: 28)
+                                .background(debugForceVerdict ? Color.white : Color(white: 0.14))
+                                .clipShape(Capsule())
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                     #endif
 
                     Button { if canChat { showChat = true } else { showPaywall = true } } label: {

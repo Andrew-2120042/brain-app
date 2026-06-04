@@ -30,6 +30,8 @@
 		9953490B07AD9770E4947437 /* CardBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E8FF5ADC0D369A28EE4F073 /* CardBackView.swift */; };
 		AA000001BB000001CC000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 7BD2D3072FCC66F9006462C0 /* RevenueCat */; };
 		AA000001BB000001CC000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 7BD2D3082FCC66F9006462C0 /* RevenueCatUI */; };
+		SE000001NT000001RY000001 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = SE000001NT000001RY000003 /* Sentry */; };
+		PH000001OG000001SDK00001 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = PH000001OG000001SDK00003 /* PostHog */; };
 		AA112233BB004455CC006677 /* 1780313101639601.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA112233BB004455CC006678 /* 1780313101639601.mp4 */; };
 		AFF131F024DFF9D1D1C287A2 /* Poppins-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 2C985A3C78686F01AB718A0F /* Poppins-Medium.ttf */; };
 		B0597096F9D182E90C0A68D6 /* ParticleField.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE6F5697E11A95DFCEE4E4E /* ParticleField.swift */; };
@@ -48,7 +50,6 @@
 		E27DB3A0B5E6F701C4CE6C80 /* paywall_bg.mov in Resources */ = {isa = PBXBuildFile; fileRef = 119728EC6ED32122E09A3A98 /* paywall_bg.mov */; };
 		E74A4CDB4F839A1DA08A2FEE /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 198E50DA2930E84EE182E354 /* PaywallView.swift */; };
 		E89A66FA4B1A39C023E20378 /* Poppins-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 924B9CF01BCA75ED5EBCE528 /* Poppins-Regular.ttf */; };
-		EA02821256DEBD638B5910C4 /* home_bg5.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = 7D924CB1475F1C3196FEB55C /* home_bg5.mp4 */; };
 		F63D86008765DA93E6BF4F34 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1757067727E2486455A3F932 /* AppViewModel.swift */; };
 		FB1B1DD2E252FA106B128A75 /* bg_noise.png in Resources */ = {isa = PBXBuildFile; fileRef = 8349399058D961CBE986F35B /* bg_noise.png */; };
 		FF001122AA003344BB005566 /* loop_10s_hd-10.mov in Resources */ = {isa = PBXBuildFile; fileRef = FF001122AA003344BB005567 /* loop_10s_hd-10.mov */; };
@@ -72,7 +73,6 @@
 		692F659720F5D9E0C65D5D19 /* HistoryPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryPanelView.swift; sourceTree = "<group>"; };
 		6E8FF5ADC0D369A28EE4F073 /* CardBackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardBackView.swift; sourceTree = "<group>"; };
 		714831E37F54C42EB5B003FE /* DecisionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecisionCard.swift; sourceTree = "<group>"; };
-		7D924CB1475F1C3196FEB55C /* home_bg5.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = home_bg5.mp4; sourceTree = "<group>"; };
 		8349399058D961CBE986F35B /* bg_noise.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = bg_noise.png; sourceTree = "<group>"; };
 		8549C4BC20780F6E614B9ADC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		873F1E8A2C2DAAC84879244F /* PatternView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternView.swift; sourceTree = "<group>"; };
@@ -109,6 +109,8 @@
 			files = (
 				AA000001BB000001CC000001 /* RevenueCat in Frameworks */,
 				AA000001BB000001CC000002 /* RevenueCatUI in Frameworks */,
+				SE000001NT000001RY000001 /* Sentry in Frameworks */,
+				PH000001OG000001SDK00001 /* PostHog in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -166,7 +168,6 @@
 				F91F3CB5640A45030ABED7CF /* DecisionEngine.swift */,
 				692F659720F5D9E0C65D5D19 /* HistoryPanelView.swift */,
 				3A14F014B27CDBA7220A82E3 /* home_bg.mp4 */,
-				7D924CB1475F1C3196FEB55C /* home_bg5.mp4 */,
 				98BBE44858C3AFBE9E30EA6D /* HomeView.swift */,
 				8549C4BC20780F6E614B9ADC /* Info.plist */,
 				A8C9556847546A916085A919 /* InputPageView.swift */,
@@ -209,6 +210,8 @@
 			packageProductDependencies = (
 				7BD2D3072FCC66F9006462C0 /* RevenueCat */,
 				7BD2D3082FCC66F9006462C0 /* RevenueCatUI */,
+				SE000001NT000001RY000003 /* Sentry */,
+				PH000001OG000001SDK00003 /* PostHog */,
 			);
 			productName = BrainLaBomb;
 			productReference = E97BA0603B4C0E32D4A1A8EB /* BrainLaBomb.app */;
@@ -240,6 +243,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				7BD2D3062FCC66F9006462C0 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				SE000001NT000001RY000002 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
+				PH000001OG000001SDK00002 /* XCRemoteSwiftPackageReference "posthog-ios" */,
 			);
 			projectDirPath = "";
 			projectRoot = "";
@@ -267,7 +272,6 @@
 				BB223344CC005566DD007788 /* ascii_export-2.mp4 in Resources */,
 				CC334455DD006677EE008899 /* ascii_export-3.mp4 in Resources */,
 				30D3FBB1C10034870985F092 /* home_bg.mp4 in Resources */,
-				EA02821256DEBD638B5910C4 /* home_bg5.mp4 in Resources */,
 				E27DB3A0B5E6F701C4CE6C80 /* paywall_bg.mov in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -385,6 +389,7 @@
 				);
 				MARKETING_VERSION = 1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brainla.bomb;
+				PRODUCT_NAME = Bracket;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -470,6 +475,7 @@
 				);
 				MARKETING_VERSION = 1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.brainla.bomb;
+				PRODUCT_NAME = Bracket;
 				SDKROOT = iphoneos;
 				SWIFT_VERSION = 5.9;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -500,6 +506,22 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		PH000001OG000001SDK00002 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/PostHog/posthog-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.0.0;
+			};
+		};
+		SE000001NT000001RY000002 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/getsentry/sentry-cocoa";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.0.0;
+			};
+		};
 		7BD2D3062FCC66F9006462C0 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
@@ -511,6 +533,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		PH000001OG000001SDK00003 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PH000001OG000001SDK00002 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
+		SE000001NT000001RY000003 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SE000001NT000001RY000002 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
+		};
 		7BD2D3072FCC66F9006462C0 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7BD2D3062FCC66F9006462C0 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;

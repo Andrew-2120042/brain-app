@@ -1,4 +1,5 @@
 import SwiftUI
+import PostHog
 
 struct PaywallView: View {
     @ObservedObject var viewModel: AppViewModel
@@ -205,6 +206,7 @@ struct PaywallView: View {
             }
         }
         .onAppear {
+            PostHogSDK.shared.capture("paywall_viewed")
             Task {
                 await viewModel.fetchOfferings()
             }
@@ -215,6 +217,11 @@ struct PaywallView: View {
             Text(purchaseErrorMessage)
         }
         .onChange(of: viewModel.purchasedTier) { newTier in
+            if newTier == .pro {
+                PostHogSDK.shared.capture("purchase_completed", properties: ["tier": "pro"])
+            } else if newTier == .core {
+                PostHogSDK.shared.capture("purchase_completed", properties: ["tier": "core"])
+            }
             if newTier != .free {
                 onDismiss?()
                 dismiss()

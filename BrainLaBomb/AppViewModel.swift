@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import UIKit
 import RevenueCat
+import PostHog
 
 enum AppState {
     case home
@@ -60,6 +61,10 @@ class AppViewModel: ObservableObject {
 
     // TODO: replace with RevenueCat check when integrated
     @Published var debugTier: AppTier = .free
+
+    #if DEBUG
+    @Published var hideDebugUI: Bool = false
+    #endif
 
     @Published var purchasedTier: AppTier = .free
     @Published var isLoadingPurchase: Bool = false
@@ -183,11 +188,17 @@ class AppViewModel: ObservableObject {
             await MainActor.run {
                 if customerInfo.entitlements["pro"]?.isActive == true {
                     self.purchasedTier = .pro
+                    PostHogSDK.shared.capture("subscription_activated", properties: ["tier": "pro"])
                 } else if customerInfo.entitlements["core"]?.isActive == true {
                     self.purchasedTier = .core
+                    PostHogSDK.shared.capture("subscription_activated", properties: ["tier": "core"])
                 } else {
                     self.purchasedTier = .free
                 }
+                PostHogSDK.shared.capture("session_started", properties: [
+                    "tier": self.purchasedTier == .pro ? "pro" : self.purchasedTier == .core ? "core" : "free",
+                    "think_count": self.thinksUsed
+                ])
             }
         } catch {}
     }
@@ -318,6 +329,20 @@ class AppViewModel: ObservableObject {
                 self.incrementThinkCounters()
                 self.saveThink(result: result)
                 self.appState = .result(result)
+                PostHogSDK.shared.capture("think_submitted", properties: [
+                    "tier": self.currentTier == .pro ? "pro" : self.currentTier == .core ? "core" : "free",
+                    "think_count": self.thinksUsed,
+                    "hour_of_day": Calendar.current.component(.hour, from: Date())
+                ])
+                if self.currentTier == .free {
+                    PostHogSDK.shared.capture("free_think_used", properties: [
+                        "thinks_used": self.thinksUsed,
+                        "thinks_remaining": max(0, 5 - self.thinksUsed)
+                    ])
+                    if self.thinksUsed >= 5 {
+                        PostHogSDK.shared.capture("free_limit_reached")
+                    }
+                }
             }
 
         } catch {

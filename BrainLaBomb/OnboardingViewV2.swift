@@ -1,5 +1,6 @@
 import SwiftUI
 import UserNotifications
+import PostHog
 
 // MARK: - OnboardingViewV2
 // One unified space. Every thought types in at the same anchor.
@@ -51,6 +52,8 @@ struct OnboardingViewV2: View {
     @State private var buildDone = false
     @State private var showPurchaseError = false
     @State private var purchaseErrorMessage = ""
+
+    @Environment(\.scenePhase) private var scenePhase
 
     @State private var blackPhase: Int = 0
     @State private var badNewsPhase: Int = 0
@@ -288,22 +291,32 @@ struct OnboardingViewV2: View {
         }
 
         #if DEBUG
-        VStack(spacing: 10) {
-            Button("→ home") { onComplete() }
-            Button("→ paywall") { showBrandIntro = false; step = 19 }
+        if !viewModel.hideDebugUI {
+            VStack(spacing: 10) {
+                Button("→ home") { onComplete() }
+                Button("→ paywall") { showBrandIntro = false; step = 19 }
+            }
+            .font(.custom("HelveticaNeue", size: 11))
+            .foregroundColor(Color(white: 0.28))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            .padding(.bottom, 52)
+            .allowsHitTesting(true)
+            .zIndex(300)
         }
-        .font(.custom("HelveticaNeue", size: 11))
-        .foregroundColor(Color(white: 0.28))
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        .padding(.bottom, 52)
-        .allowsHitTesting(true)
-        .zIndex(300)
         #endif
 
         }
         .animation(.easeInOut(duration: 0.5), value: showBrandIntro)
         .onChange(of: showBrandIntro) { newValue in
             if !newValue { startTyping() }
+        }
+        .onChange(of: scenePhase) { phase in
+            if phase == .background {
+                PostHogSDK.shared.capture("onboarding_abandoned", properties: [
+                    "step": step,
+                    "step_name": onboardingStepName(step)
+                ])
+            }
         }
     }
 
@@ -1291,7 +1304,10 @@ struct OnboardingViewV2: View {
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) {
                 withAnimation(.easeInOut(duration: 1.0)) { youreReadyPhase = 0 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) { onComplete() }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+                    PostHogSDK.shared.capture("onboarding_completed")
+                    onComplete()
+                }
             }
         }
     }
@@ -1482,7 +1498,10 @@ struct OnboardingViewV2: View {
                         Text("Restore").font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.28))
                     }
                     .buttonStyle(PlainButtonStyle())
-                    Button { advanceNoHistory() } label: {
+                    Button {
+                        PostHogSDK.shared.capture("paywall_skipped")
+                        advanceNoHistory()
+                    } label: {
                         Text("Skip for now").font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.28))
                     }
                     .buttonStyle(PlainButtonStyle())
@@ -1495,6 +1514,7 @@ struct OnboardingViewV2: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .onAppear {
+            PostHogSDK.shared.capture("paywall_viewed")
             Task {
                 await viewModel.fetchOfferings()
             }
@@ -2016,6 +2036,10 @@ struct OnboardingViewV2: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
             isTransitioning = false
             step += 1
+            PostHogSDK.shared.capture("onboarding_step_viewed", properties: [
+                "step": step,
+                "step_name": onboardingStepName(step)
+            ])
             startTyping()
         }
     }
@@ -2032,6 +2056,10 @@ struct OnboardingViewV2: View {
             isTransitioning = false
             if step >= 22 { onComplete(); return }
             step += 1
+            PostHogSDK.shared.capture("onboarding_step_viewed", properties: [
+                "step": step,
+                "step_name": onboardingStepName(step)
+            ])
             startTyping()
         }
     }
@@ -2059,6 +2087,37 @@ struct OnboardingViewV2: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Analytics helpers
+
+    private func onboardingStepName(_ s: Int) -> String {
+        switch s {
+        case 0: return "welcome"
+        case 1: return "name"
+        case 2: return "age"
+        case 3: return "goal"
+        case 4: return "decision_style"
+        case 5: return "pressure"
+        case 6: return "overthink"
+        case 7: return "regret"
+        case 8: return "clarity"
+        case 9: return "confidence"
+        case 10: return "relationships"
+        case 11: return "work"
+        case 12: return "money"
+        case 13: return "health"
+        case 14: return "values"
+        case 15: return "risk_tolerance"
+        case 16: return "support"
+        case 17: return "time_horizon"
+        case 18: return "emotion_regulation"
+        case 19: return "past_decisions"
+        case 20: return "future_vision"
+        case 21: return "commitment"
+        case 22: return "complete"
+        default: return "step_\(s)"
         }
     }
 

@@ -419,7 +419,12 @@ struct APIClient {
             throw APIError.invalidResponse
         }
 
-        return text
+        // Strip any text appended after the closing JSON brace
+        var responseString = text
+        if let lastBrace = responseString.range(of: "}", options: .backwards) {
+            responseString = String(responseString[...lastBrace.lowerBound])
+        }
+        return responseString
     }
 
     // MARK: - Helpers
