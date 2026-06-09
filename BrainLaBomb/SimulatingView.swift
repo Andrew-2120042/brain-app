@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SimulatingView: View {
-    private let videoURL = Bundle.main.url(forResource: "loop_10s_hd-4", withExtension: "mp4")!
+    private let videoURL = Bundle.main.url(forResource: "loop_10s_hd-14", withExtension: "mp4")!
 
     var body: some View {
         ZStack {
