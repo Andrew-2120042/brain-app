@@ -15,8 +15,9 @@ enum Constants {
     }
 
     // MARK: - App
-    static let maxFreeThinks = 15
     static let thinksUsedKey = "thinksUsed"
+    static let trialDays = 7
+    static let trialDaysString = "7 days"
     static let thinkHistoryKey = "thinkHistory"
 
     // MARK: - Prompts

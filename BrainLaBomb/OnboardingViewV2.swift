@@ -661,6 +661,10 @@ struct OnboardingViewV2: View {
                         }
                     }
                 }
+                Text("you can select multiple answers")
+                    .font(.custom("Poppins-Regular", size: 13))
+                    .foregroundColor(Color(white: 0.35))
+                    .padding(.top, 8)
                 if step6ContinueVisible {
                     Spacer().frame(height: 16)
                     v2Button("continue") { handleStep6Continue() }
@@ -720,6 +724,10 @@ struct OnboardingViewV2: View {
                     }
                 }
             }
+            Text("you can select multiple answers")
+                .font(.custom("Poppins-Regular", size: 13))
+                .foregroundColor(Color(white: 0.35))
+                .padding(.top, 8)
             if step7ContinueVisible {
                 Spacer().frame(height: 16)
                 v2Button("continue") { handleStep7Continue() }
@@ -764,6 +772,10 @@ struct OnboardingViewV2: View {
                     }
                 }
             }
+            Text("you can select multiple answers")
+                .font(.custom("Poppins-Regular", size: 13))
+                .foregroundColor(Color(white: 0.35))
+                .padding(.top, 8)
             if step8ContinueVisible {
                 Spacer().frame(height: 16)
                 v2Button("continue") { handleStep8Continue() }
@@ -1352,7 +1364,7 @@ struct OnboardingViewV2: View {
                 .padding(.horizontal, 36)
                 Spacer()
                 Button { advanceNoHistory() } label: {
-                    Text("start your free trial")
+                    Text("see your options")
                         .font(.custom("HelveticaNeue", size: 17))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
@@ -1417,22 +1429,34 @@ struct OnboardingViewV2: View {
 
                 Spacer()
 
-                VStack(spacing: 4) {
-                    Text("3 Days for $0.00")
-                        .font(.custom("HelveticaNeue-Bold", size: 17))
-                        .foregroundColor(.white)
-                    Text("Then $99.99/year. Cancel anytime.")
-                        .font(.custom("Poppins-Regular", size: 13))
-                        .foregroundColor(Color(white: 0.42))
+                if selectedPlan == 0 {
+                    VStack(spacing: 4) {
+                        Text("7 Days for $0.00")
+                            .font(.custom("HelveticaNeue-Bold", size: 17))
+                            .foregroundColor(.white)
+                        Text("Then $99.99/year. Cancel anytime.")
+                            .font(.custom("Poppins-Regular", size: 13))
+                            .foregroundColor(Color(white: 0.42))
+                    }
+                    .frame(maxWidth: .infinity)
+                } else {
+                    VStack(spacing: 4) {
+                        Text("300 Thinks")
+                            .font(.custom("HelveticaNeue-Bold", size: 17))
+                            .foregroundColor(.white)
+                        Text("$59.99 for 6 months.")
+                            .font(.custom("Poppins-Regular", size: 13))
+                            .foregroundColor(Color(white: 0.42))
+                    }
+                    .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity)
 
                 VStack(spacing: 8) {
-                    pwPlanCard(0, "PRO — Unlimited", "$99.99/year", "3 Days Free",
+                    pwPlanCard(0, "PRO — Unlimited", "$99.99/year", "7 Days Free",
                                ["unlimited thinks", "deeper simulations", "pattern memory", "faster reasoning"],
                                "billed annually")
-                    pwPlanCard(1, "CORE", "$59 / 6 months", "500 Thinks",
-                               ["500 thinks", "full simulation access", "pattern tracking"],
+                    pwPlanCard(1, "CORE", "$59.99 / 6 months", "300 Thinks",
+                               ["300 thinks", "full simulation access", "pattern tracking"],
                                "billed every 6 months")
                 }
                 .padding(.top, 12)
@@ -1444,7 +1468,7 @@ struct OnboardingViewV2: View {
                             $0.storeProduct.productIdentifier == productId
                         }) {
                             await viewModel.purchase(package: package)
-                            if viewModel.purchasedTier != .free {
+                            if viewModel.purchasedTier == .pro || viewModel.purchasedTier == .core {
                                 advanceNoHistory()
                             }
                         } else {
@@ -1455,7 +1479,7 @@ struct OnboardingViewV2: View {
                         }
                     }
                 } label: {
-                    Text("start my free trial")
+                    Text(selectedPlan == 0 ? "start my 7-day free trial" : "get Core — 300 thinks for $59.99")
                         .font(.custom("HelveticaNeue-Bold", size: 17))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -1466,16 +1490,18 @@ struct OnboardingViewV2: View {
                 .buttonStyle(PlainButtonStyle())
                 .padding(.top, 12)
 
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(Color(white: 0.36))
-                    Text("3 days free. cancel anytime.")
-                        .font(.custom("Poppins-Regular", size: 12))
-                        .foregroundColor(Color(white: 0.36))
+                if selectedPlan == 0 {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(Color(white: 0.36))
+                        Text("7 days free. cancel anytime.")
+                            .font(.custom("Poppins-Regular", size: 12))
+                            .foregroundColor(Color(white: 0.36))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 8)
 
                 HStack(spacing: 18) {
                     Button {
@@ -1485,7 +1511,7 @@ struct OnboardingViewV2: View {
                     Button {
                         Task {
                             await viewModel.restorePurchases()
-                            if viewModel.purchasedTier != .free {
+                            if viewModel.purchasedTier == .pro || viewModel.purchasedTier == .core {
                                 advanceNoHistory()
                             } else {
                                 await MainActor.run {
@@ -2154,7 +2180,7 @@ struct OnboardingViewV2: View {
     private func v2RequestNotifications(completion: @escaping () -> Void) {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
             DispatchQueue.main.async {
-                if granted { NotificationManager.shared.scheduleWeeklyNotification() }
+                if granted { NotificationManager.shared.scheduleDailyNotification() }
                 completion()
             }
         }

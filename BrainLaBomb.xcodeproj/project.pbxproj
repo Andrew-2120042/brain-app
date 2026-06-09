@@ -30,8 +30,6 @@
 		9953490B07AD9770E4947437 /* CardBackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6E8FF5ADC0D369A28EE4F073 /* CardBackView.swift */; };
 		AA000001BB000001CC000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = 7BD2D3072FCC66F9006462C0 /* RevenueCat */; };
 		AA000001BB000001CC000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = 7BD2D3082FCC66F9006462C0 /* RevenueCatUI */; };
-		SE000001NT000001RY000001 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = SE000001NT000001RY000003 /* Sentry */; };
-		PH000001OG000001SDK00001 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = PH000001OG000001SDK00003 /* PostHog */; };
 		AA112233BB004455CC006677 /* 1780313101639601.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA112233BB004455CC006678 /* 1780313101639601.mp4 */; };
 		AFF131F024DFF9D1D1C287A2 /* Poppins-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 2C985A3C78686F01AB718A0F /* Poppins-Medium.ttf */; };
 		B0597096F9D182E90C0A68D6 /* ParticleField.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE6F5697E11A95DFCEE4E4E /* ParticleField.swift */; };
@@ -53,6 +51,8 @@
 		F63D86008765DA93E6BF4F34 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1757067727E2486455A3F932 /* AppViewModel.swift */; };
 		FB1B1DD2E252FA106B128A75 /* bg_noise.png in Resources */ = {isa = PBXBuildFile; fileRef = 8349399058D961CBE986F35B /* bg_noise.png */; };
 		FF001122AA003344BB005566 /* loop_10s_hd-10.mov in Resources */ = {isa = PBXBuildFile; fileRef = FF001122AA003344BB005567 /* loop_10s_hd-10.mov */; };
+		PH000001OG000001SDK00001 /* PostHog in Frameworks */ = {isa = PBXBuildFile; productRef = PH000001OG000001SDK00003 /* PostHog */; };
+		SE000001NT000001RY000001 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = SE000001NT000001RY000003 /* Sentry */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -97,7 +97,7 @@
 		D788A04806AD19CE0F6B19BE /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		DD001122EE003344FF005567 /* loop_10s_hd-7.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "loop_10s_hd-7.mp4"; sourceTree = "<group>"; };
 		E7433B793F4F80856102E9C1 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
-		E97BA0603B4C0E32D4A1A8EB /* BrainLaBomb.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BrainLaBomb.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E97BA0603B4C0E32D4A1A8EB /* Bracket.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Bracket.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F91F3CB5640A45030ABED7CF /* DecisionEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DecisionEngine.swift; sourceTree = "<group>"; };
 		FF001122AA003344BB005567 /* loop_10s_hd-10.mov */ = {isa = PBXFileReference; lastKnownFileType = video.quicktime; path = "loop_10s_hd-10.mov"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -120,7 +120,7 @@
 		41BBC2A0A74BA499B1DF2C8C /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				E97BA0603B4C0E32D4A1A8EB /* BrainLaBomb.app */,
+				E97BA0603B4C0E32D4A1A8EB /* Bracket.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -214,7 +214,7 @@
 				PH000001OG000001SDK00003 /* PostHog */,
 			);
 			productName = BrainLaBomb;
-			productReference = E97BA0603B4C0E32D4A1A8EB /* BrainLaBomb.app */;
+			productReference = E97BA0603B4C0E32D4A1A8EB /* Bracket.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -379,7 +379,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = A4FXWA835F;
 				INFOPLIST_FILE = BrainLaBomb/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Bracket;
@@ -465,7 +465,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = A4FXWA835F;
 				INFOPLIST_FILE = BrainLaBomb/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Bracket;
@@ -506,6 +506,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		7BD2D3062FCC66F9006462C0 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.75.0;
+			};
+		};
 		PH000001OG000001SDK00002 /* XCRemoteSwiftPackageReference "posthog-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/PostHog/posthog-ios";
@@ -522,27 +530,9 @@
 				minimumVersion = 8.0.0;
 			};
 		};
-		7BD2D3062FCC66F9006462C0 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.75.0;
-			};
-		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		PH000001OG000001SDK00003 /* PostHog */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = PH000001OG000001SDK00002 /* XCRemoteSwiftPackageReference "posthog-ios" */;
-			productName = PostHog;
-		};
-		SE000001NT000001RY000003 /* Sentry */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = SE000001NT000001RY000002 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
-			productName = Sentry;
-		};
 		7BD2D3072FCC66F9006462C0 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 7BD2D3062FCC66F9006462C0 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
@@ -552,6 +542,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 7BD2D3062FCC66F9006462C0 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCatUI;
+		};
+		PH000001OG000001SDK00003 /* PostHog */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = PH000001OG000001SDK00002 /* XCRemoteSwiftPackageReference "posthog-ios" */;
+			productName = PostHog;
+		};
+		SE000001NT000001RY000003 /* Sentry */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SE000001NT000001RY000002 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
+			productName = Sentry;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

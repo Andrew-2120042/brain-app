@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import UIKit
+import StoreKit
 import RevenueCat
 import PostHog
 
@@ -12,11 +13,10 @@ enum AppState {
     case processingSecond
     case result(DecisionResult)
     case error(String)
-    case paywallRequired
+
 }
 
 enum AppTier {
-    case free
     case core
     case pro
 }
@@ -60,13 +60,13 @@ class AppViewModel: ObservableObject {
     // MARK: - Tier Management
 
     // TODO: replace with RevenueCat check when integrated
-    @Published var debugTier: AppTier = .free
+    @Published var debugTier: AppTier = .core
 
     #if DEBUG
     @Published var hideDebugUI: Bool = false
     #endif
 
-    @Published var purchasedTier: AppTier = .free
+    @Published var purchasedTier: AppTier = .core
     @Published var isLoadingPurchase: Bool = false
     @Published var currentOffering: Offering? = nil
 
@@ -83,7 +83,7 @@ class AppViewModel: ObservableObject {
         set { UserDefaults.standard.set(newValue, forKey: "coreThinksUsed") }
     }
 
-    var coreThinkLimit: Int { 500 }
+    var coreThinkLimit: Int { 300 }
     var coreSonnetLimit: Int { 350 }
 
     var coreThinksRemaining: Int {
@@ -101,13 +101,8 @@ class AppViewModel: ObservableObject {
         set { UserDefaults.standard.set(newValue, forKey: Constants.thinksUsedKey) }
     }
 
-    var thinksRemaining: Int {
-        max(0, Constants.maxFreeThinks - thinksUsed)
-    }
-
     var thinkLimitReached: Bool {
         switch currentTier {
-        case .free: return thinksUsed >= Constants.maxFreeThinks
         case .core: return coreLimitReached
         case .pro:  return false
         }
@@ -193,10 +188,10 @@ class AppViewModel: ObservableObject {
                     self.purchasedTier = .core
                     PostHogSDK.shared.capture("subscription_activated", properties: ["tier": "core"])
                 } else {
-                    self.purchasedTier = .free
+                    self.purchasedTier = .core
                 }
                 PostHogSDK.shared.capture("session_started", properties: [
-                    "tier": self.purchasedTier == .pro ? "pro" : self.purchasedTier == .core ? "core" : "free",
+                    "tier": self.purchasedTier == .pro ? "pro" : "core",
                     "think_count": self.thinksUsed
                 ])
             }
@@ -249,12 +244,9 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Flow
     func submitQuestion(_ question: String) {
-        guard !thinkLimitReached else {
-            appState = .paywallRequired
-            return
-        }
+        let sanitizedQuestion = sanitizeInput(question)
         savedFollowUpAnswer = ""
-        originalQuestion = question
+        originalQuestion = sanitizedQuestion
         appState = .processingFirst
 
         // TODO: RENAME — replace with final app name before App Store submission
@@ -262,7 +254,7 @@ class AppViewModel: ObservableObject {
 
         currentTask = Task {
             do {
-                let firstPass = try await APIClient.shared.firstPass(question: question, useHaiku: shouldUseHaiku)
+                let firstPass = try await APIClient.shared.firstPass(question: sanitizedQuestion, useHaiku: shouldUseHaiku)
 
                 await MainActor.run {
                     if firstPass.needsQuestion && !firstPass.question.isEmpty {
@@ -329,20 +321,16 @@ class AppViewModel: ObservableObject {
                 self.incrementThinkCounters()
                 self.saveThink(result: result)
                 self.appState = .result(result)
+                UserDefaults.standard.set(
+                    UserDefaults.standard.integer(forKey: "totalThinkCount") + 1,
+                    forKey: "totalThinkCount"
+                )
+                self.requestReviewIfAppropriate()
                 PostHogSDK.shared.capture("think_submitted", properties: [
-                    "tier": self.currentTier == .pro ? "pro" : self.currentTier == .core ? "core" : "free",
+                    "tier": self.currentTier == .pro ? "pro" : "core",
                     "think_count": self.thinksUsed,
                     "hour_of_day": Calendar.current.component(.hour, from: Date())
                 ])
-                if self.currentTier == .free {
-                    PostHogSDK.shared.capture("free_think_used", properties: [
-                        "thinks_used": self.thinksUsed,
-                        "thinks_remaining": max(0, 5 - self.thinksUsed)
-                    ])
-                    if self.thinksUsed >= 5 {
-                        PostHogSDK.shared.capture("free_limit_reached")
-                    }
-                }
             }
 
         } catch {
@@ -369,6 +357,20 @@ class AppViewModel: ObservableObject {
             }
         }
         return message
+    }
+
+    private func sanitizeInput(_ input: String) -> String {
+        let maxLength = 1000
+        var sanitized = input.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if sanitized.count > maxLength {
+            sanitized = String(sanitized.prefix(maxLength))
+        }
+
+        sanitized = sanitized.filter { !$0.isNewline || $0 == "\n" }
+        sanitized = sanitized.replacingOccurrences(of: "\0", with: "")
+
+        return sanitized
     }
 
     func reset() {
@@ -492,6 +494,28 @@ class AppViewModel: ObservableObject {
     // Clears think history and pattern memory only.
     // All counters (thinksUsed, coreThinksUsed, monthly counts) are intentionally
     // kept so tier enforcement can't be gamed by resetting memory.
+    func requestReviewIfAppropriate() {
+        #if DEBUG
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            if let scene = UIApplication.shared.connectedScenes
+                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                SKStoreReviewController.requestReview(in: scene)
+            }
+        }
+        #else
+        let thinkCount = UserDefaults.standard.integer(forKey: "totalThinkCount")
+        let hasReviewed = UserDefaults.standard.bool(forKey: "hasRequestedReview")
+        guard thinkCount >= 3 && !hasReviewed else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            if let scene = UIApplication.shared.connectedScenes
+                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+                SKStoreReviewController.requestReview(in: scene)
+                UserDefaults.standard.set(true, forKey: "hasRequestedReview")
+            }
+        }
+        #endif
+    }
+
     func resetBrainMemory() {
         // Clear in-memory array first
         thinkHistory = []

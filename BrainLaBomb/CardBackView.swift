@@ -19,7 +19,7 @@ struct CardBackView: View {
     #endif
 
     private var canChat: Bool {
-        viewModel.debugTier == .pro // TODO: replace with RevenueCat
+        viewModel.currentTier == .pro || viewModel.currentTier == .core
     }
 
     init(result: DecisionResult,

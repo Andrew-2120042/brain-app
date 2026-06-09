@@ -77,7 +77,7 @@ struct PaywallView: View {
                 Spacer()
 
                 VStack(spacing: 10) {
-                    paywallPlanCard(index: 0, title: "CORE", price: "$59.99", subtitle: "500 thinks · 6 months", detail: "everything unlocked", isProBadge: false)
+                    paywallPlanCard(index: 0, title: "CORE", price: "$59.99", subtitle: "300 thinks · 6 months", detail: "everything unlocked", isProBadge: false)
                     paywallPlanCard(index: 1, title: "PRO", price: "$99.99/year", subtitle: "unlimited thinks", detail: "chat + full memory", isProBadge: true)
                 }
                 .padding(.horizontal, 24)
@@ -106,7 +106,7 @@ struct PaywallView: View {
                         }
                     }
                 }) {
-                    Text(selectedPlan == 0 ? "get Core — $59.99" : "start my 3-day free trial")
+                    Text(selectedPlan == 0 ? "get Core — 300 thinks for $59.99" : "start my 7-day free trial")
                         .font(.custom("HelveticaNeue", size: 17))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
@@ -122,7 +122,7 @@ struct PaywallView: View {
                     Button(action: {
                         Task {
                             await viewModel.restorePurchases()
-                            if viewModel.purchasedTier == .free {
+                            if viewModel.purchasedTier != .pro && viewModel.purchasedTier != .core {
                                 await MainActor.run {
                                     purchaseErrorMessage = "No active subscription found for this Apple ID."
                                     showPurchaseError = true
@@ -158,12 +158,12 @@ struct PaywallView: View {
                 .padding(.bottom, 8)
 
                 if selectedPlan == 1 {
-                    Text("3 days free, then $99.99/year. Cancel anytime.")
+                    Text("7 days free, then $99.99/year. Cancel anytime.")
                         .font(.custom("HelveticaNeue", size: 11))
                         .foregroundColor(Color(white: 0.3))
                         .padding(.bottom, 32)
                 } else {
-                    Text("$59.99 every 6 months. Cancel anytime.")
+                    Text("300 thinks. $59.99 for 6 months. Cancel anytime.")
                         .font(.custom("HelveticaNeue", size: 11))
                         .foregroundColor(Color(white: 0.3))
                         .padding(.bottom, 32)
@@ -222,7 +222,7 @@ struct PaywallView: View {
             } else if newTier == .core {
                 PostHogSDK.shared.capture("purchase_completed", properties: ["tier": "core"])
             }
-            if newTier != .free {
+            if newTier == .pro || newTier == .core {
                 onDismiss?()
                 dismiss()
             }
@@ -241,7 +241,7 @@ struct PaywallView: View {
                             .font(.custom("HelveticaNeue", size: 15))
                             .foregroundColor(.white)
                         if isProBadge {
-                            Text("3 DAYS FREE")
+                            Text("7 DAYS FREE")
                                 .font(.system(size: 10, weight: .bold))
                                 .foregroundColor(.black)
                                 .padding(.horizontal, 6)

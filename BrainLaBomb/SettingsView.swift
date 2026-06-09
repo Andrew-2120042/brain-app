@@ -65,27 +65,18 @@ struct SettingsView: View {
     private var brainSection: some View {
         VStack(spacing: 0) {
             sectionHeader("your brain")
-            settingsRow(
-                label: "thinks this month",
-                value: "\(viewModel.monthlyThinkCount) of 200 on Sonnet"
-            )
-            if viewModel.currentTier == .free {
-                settingsRow(
-                    label: "thinks used",
-                    value: "\(viewModel.thinksUsed) of \(Constants.maxFreeThinks) free"
-                )
-                if viewModel.thinkLimitReached {
-                    settingsRow(label: "free thinks used up", action: {
-                        viewModel.appState = .paywallRequired
-                        dismiss()
-                    })
-                } else {
-                    settingsRow(
-                        label: "\(viewModel.thinksRemaining) thinks remaining",
-                        value: nil
-                    )
-                }
-            } else if viewModel.currentTier == .core {
+            HStack {
+                Text("current plan")
+                    .font(.custom("HelveticaNeue", size: 15))
+                    .foregroundColor(Color(white: 0.6))
+                Spacer()
+                Text(viewModel.currentTier == .pro ? "pro" : "core")
+                    .font(.custom("HelveticaNeue", size: 15))
+                    .foregroundColor(.white)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 14)
+            if viewModel.currentTier == .core {
                 settingsRow(
                     label: "thinks used",
                     value: "\(viewModel.coreThinksUsed) of \(viewModel.coreThinkLimit)"
@@ -104,18 +95,20 @@ struct SettingsView: View {
                     value: "\(viewModel.thinksUsed)"
                 )
             }
-            Button { showPaywall = true } label: {
-                Text("unlock unlimited thinks")
-                    .font(.custom("HelveticaNeue", size: 15))
-                    .foregroundColor(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            if viewModel.currentTier != .pro {
+                Button { showPaywall = true } label: {
+                    Text("unlock unlimited thinks")
+                        .font(.custom("HelveticaNeue", size: 15))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
             }
-            .buttonStyle(PlainButtonStyle())
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
         }
     }
 
@@ -124,7 +117,7 @@ struct SettingsView: View {
             sectionHeader("notifications")
 
             HStack {
-                Text("weekly nudge")
+                Text("daily notifications")
                     .font(.system(size: 15, weight: .regular))
                     .foregroundColor(.white)
                 Spacer()
@@ -138,7 +131,7 @@ struct SettingsView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 14)
 
-            Text("once a week. never spam.")
+            Text("once a day. always relevant.")
                 .font(.system(size: 12, weight: .regular))
                 .foregroundColor(Color(white: 0.3))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -192,8 +185,39 @@ struct SettingsView: View {
                     UIApplication.shared.open(url)
                 }
             })
-            Text("opens your mail app. we read everything.")
+            Text("we read everything.")
                 .font(.system(size: 12, weight: .regular))
+                .foregroundColor(Color(white: 0.3))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 14)
+
+            Button(action: {
+                let email = "godiandrewwilson@gmail.com"
+                let subject = "Feature Request"
+                let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+                let body = "App version: \(version)\n\nFeature request:\n"
+                let urlString = "mailto:\(email)?subject=\(subject)&body=\(body)"
+                    .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                if let url = URL(string: urlString) {
+                    UIApplication.shared.open(url)
+                }
+            }) {
+                HStack {
+                    Text("request a feature")
+                        .font(.custom("HelveticaNeue", size: 15))
+                        .foregroundColor(.white)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(white: 0.3))
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
+            }
+
+            Text("got an idea? we want to hear it.")
+                .font(.custom("Poppins-Regular", size: 12))
                 .foregroundColor(Color(white: 0.3))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24)
@@ -336,7 +360,7 @@ struct SettingsView: View {
             UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
                 DispatchQueue.main.async {
                     if granted {
-                        NotificationManager.shared.scheduleWeeklyNotification()
+                        NotificationManager.shared.scheduleDailyNotification()
                         notificationsEnabled = true
                     } else {
                         notificationsEnabled = false

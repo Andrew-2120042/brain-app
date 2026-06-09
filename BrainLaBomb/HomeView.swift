@@ -97,9 +97,8 @@ struct HomeView: View {
                     if !viewModel.hideDebugUI {
                         Button {
                             switch viewModel.debugTier {
-                            case .free: viewModel.debugTier = .core
                             case .core: viewModel.debugTier = .pro
-                            case .pro:  viewModel.debugTier = .free
+                            case .pro:  viewModel.debugTier = .core
                             }
                         } label: {
                             Text(tierLabel)
@@ -147,15 +146,7 @@ struct HomeView: View {
                     .padding(.bottom, 60)
             } else {
                 VStack(spacing: 12) {
-                    Button(action: {
-                        if viewModel.thinkLimitReached {
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                viewModel.appState = .paywallRequired
-                            }
-                        } else {
-                            onTap()
-                        }
-                    }) {
+                    Button(action: onTap) {
                         Text("Think")
                             .font(.custom("HelveticaNeue", size: 17))
                             .foregroundColor(.black)
@@ -171,13 +162,7 @@ struct HomeView: View {
                         .foregroundColor(Color(white: 0.25))
                         .tracking(2)
 
-                    #if !DEBUG
-                    if viewModel.currentTier == .free && viewModel.thinksUsed < Constants.maxFreeThinks {
-                        Text("\(viewModel.thinksRemaining) free thinks remaining")
-                            .font(.system(size: 12, weight: .regular))
-                            .foregroundColor(Color(white: 0.3))
-                    }
-                    #endif
+
                 }
                 .padding(.horizontal, 28)
                 .padding(.bottom, 56)
@@ -226,7 +211,6 @@ struct HomeView: View {
 
     private var tierLabel: String {
         switch viewModel.debugTier {
-        case .free: return "FREE"
         case .core: return "CORE"
         case .pro:  return "PRO"
         }
@@ -234,7 +218,6 @@ struct HomeView: View {
 
     private var tierColor: Color {
         switch viewModel.debugTier {
-        case .free: return Color(white: 0.5)
         case .core: return Color.blue
         case .pro:  return Color.green
         }

@@ -53,14 +53,6 @@ struct ContentView: View {
                 )
                 .transition(.opacity)
 
-            case .paywallRequired:
-                PaywallView(viewModel: viewModel, onDismiss: {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        viewModel.appState = .home
-                    }
-                })
-                .transition(.opacity)
-
             case .error(let msg):
                 ErrorView(message: msg) {
                     viewModel.retry()
@@ -114,7 +106,6 @@ struct ContentView: View {
         case .input:            return 1
         case .error:            return 6
         case .home:             return 0
-        case .paywallRequired:  return 7
         }
     }
 }
