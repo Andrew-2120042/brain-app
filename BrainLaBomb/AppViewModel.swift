@@ -207,10 +207,17 @@ class AppViewModel: ObservableObject {
         } catch {}
     }
 
-    func purchase(package: Package) async {
+    @discardableResult
+    func purchase(package: Package) async -> Bool {
         await MainActor.run { isLoadingPurchase = true }
         do {
             let result = try await Purchases.shared.purchase(package: package)
+            guard !result.userCancelled else {
+                await MainActor.run { isLoadingPurchase = false }
+                return false
+            }
+            let succeeded = result.customerInfo.entitlements["pro"]?.isActive == true ||
+                            result.customerInfo.entitlements["core"]?.isActive == true
             await MainActor.run {
                 isLoadingPurchase = false
                 if result.customerInfo.entitlements["pro"]?.isActive == true {
@@ -219,14 +226,19 @@ class AppViewModel: ObservableObject {
                     self.purchasedTier = .core
                 }
             }
+            return succeeded
         } catch {
             await MainActor.run { isLoadingPurchase = false }
+            return false
         }
     }
 
-    func restorePurchases() async {
+    @discardableResult
+    func restorePurchases() async -> Bool {
         do {
             let customerInfo = try await Purchases.shared.restorePurchases()
+            let hasActive = customerInfo.entitlements["pro"]?.isActive == true ||
+                            customerInfo.entitlements["core"]?.isActive == true
             await MainActor.run {
                 if customerInfo.entitlements["pro"]?.isActive == true {
                     self.purchasedTier = .pro
@@ -234,7 +246,10 @@ class AppViewModel: ObservableObject {
                     self.purchasedTier = .core
                 }
             }
-        } catch {}
+            return hasActive
+        } catch {
+            return false
+        }
     }
 
     // MARK: - Init

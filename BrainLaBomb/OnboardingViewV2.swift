@@ -52,6 +52,9 @@ struct OnboardingViewV2: View {
     @State private var buildDone = false
     @State private var showPurchaseError = false
     @State private var purchaseErrorMessage = ""
+    @State private var typingGeneration = 0
+    @State private var paywallProPrice = "$99.99"
+    @State private var paywallCorePrice = "$59.99"
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -59,6 +62,7 @@ struct OnboardingViewV2: View {
     @State private var badNewsPhase: Int = 0
     @State private var goodNewsPhase: Int = 0
     @State private var rollingPhrase: Int = 0
+    @State private var goodNewsRolling = false
     @State private var badNewsQuotePhrase: Int = 0
     @State private var displayedMomentsNumber: String = "000,000"
     @State private var goodNewsVariant: Int = 0
@@ -160,6 +164,16 @@ struct OnboardingViewV2: View {
          "something happened and I need to process it",
          "something else — let me type it"]
     ]
+
+    init(viewModel: AppViewModel, onComplete: @escaping () -> Void) {
+        self.viewModel = viewModel
+        self.onComplete = onComplete
+        let saved = UserDefaults.standard.object(forKey: Constants.onboardingProgressKey) as? Int ?? 0
+        if saved > 0 {
+            _showBrandIntro = State(initialValue: false)
+            _step = State(initialValue: min(saved, 19))
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -295,6 +309,10 @@ struct OnboardingViewV2: View {
             VStack(spacing: 10) {
                 Button("→ home") { onComplete() }
                 Button("→ paywall") { showBrandIntro = false; step = 19 }
+                Button("→ pattern reveal") { showBrandIntro = false; step = 13 }
+                Button("→ bad news") { showBrandIntro = false; step = 14 }
+                Button("→ good news") { showBrandIntro = false; step = 15 }
+                Button("→ how we help") { showBrandIntro = false; step = 16 }
             }
             .font(.custom("HelveticaNeue", size: 11))
             .foregroundColor(Color(white: 0.28))
@@ -317,6 +335,9 @@ struct OnboardingViewV2: View {
                     "step_name": onboardingStepName(step)
                 ])
             }
+        }
+        .onAppear {
+            if !showBrandIntro { startTyping() }
         }
     }
 
@@ -566,12 +587,16 @@ struct OnboardingViewV2: View {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
             isTransitioning = false
+            typingGeneration += 1
+            let gen = typingGeneration
             let chars = Array(reflection)
             for (i, char) in chars.enumerated() {
                 DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.022) {
+                    guard typingGeneration == gen else { return }
                     typedText.append(char)
                     if i == chars.count - 1 {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            guard typingGeneration == gen else { return }
                             advance(q: reflection, a: "")
                         }
                     }
@@ -608,12 +633,16 @@ struct OnboardingViewV2: View {
 
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
                             isTransitioning = false
+                            typingGeneration += 1
+                            let gen = typingGeneration
                             let chars = Array(reflection)
                             for (k, char) in chars.enumerated() {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + Double(k) * 0.022) {
+                                    guard typingGeneration == gen else { return }
                                     typedText.append(char)
                                     if k == chars.count - 1 {
                                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                                            guard typingGeneration == gen else { return }
                                             advance(q: reflection, a: "")
                                         }
                                     }
@@ -1061,11 +1090,16 @@ struct OnboardingViewV2: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { advanceNoHistory() }
                 } label: {
                     Text("continue")
-                        .font(.custom("HelveticaNeue", size: 14))
-                        .foregroundColor(.white.opacity(0.6))
-                        .tracking(2)
+                        .font(.custom("HelveticaNeue", size: 17))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .buttonStyle(PlainButtonStyle())
+                .padding(.horizontal, 32)
+                .padding(.bottom, 12)
                 .opacity(patternRevealPhase >= 5 ? 1 : 0)
                 .animation(.easeIn(duration: 0.4), value: patternRevealPhase >= 5)
 
@@ -1402,8 +1436,16 @@ struct OnboardingViewV2: View {
 
     private var paywallView: some View {
         let blue = Color(red: 0.22, green: 0.36, blue: 1.0)
+        let paywallVideoURL = Bundle.main.url(forResource: "paywall_bg", withExtension: "mov")
         return ZStack {
-            Color.black.ignoresSafeArea()
+            if let url = paywallVideoURL {
+                LoopingVideoView(url: url)
+                    .ignoresSafeArea()
+                    .scaleEffect(1.05)
+                Color.black.opacity(0.72).ignoresSafeArea()
+            } else {
+                Color.black.ignoresSafeArea()
+            }
             VStack(alignment: .leading, spacing: 0) {
                 Text("your next decision\nchanges everything.")
                     .font(.custom("HelveticaNeue-Bold", size: 26))
@@ -1418,12 +1460,12 @@ struct OnboardingViewV2: View {
                     .padding(.top, 10)
 
                 VStack(alignment: .leading, spacing: 0) {
-                    pwTimelineRow("checkmark", true,  "today",
-                                  "bring the decision\nyou can't stop thinking about.", false)
-                    pwTimelineRow("lightbulb.fill", false, "day 3",
-                                  "notice the patterns\nbehind your hesitation.", false)
-                    pwTimelineRow("star.fill", false, "week 1+",
-                                  "stop staying stuck.\nstart moving forward.", true)
+                    pwTimelineRow("checkmark", true,  "the thought",
+                                  "bring the thing you can't stop thinking about.", false)
+                    pwTimelineRow("lightbulb.fill", false, "the verdict",
+                                  "thousands of simulations. one clear answer.", false)
+                    pwTimelineRow("star.fill", false, "the outcome",
+                                  "you start moving with clarity.", true)
                 }
                 .padding(.top, 16)
 
@@ -1434,7 +1476,7 @@ struct OnboardingViewV2: View {
                         Text("7 Days for $0.00")
                             .font(.custom("HelveticaNeue-Bold", size: 17))
                             .foregroundColor(.white)
-                        Text("Then $99.99/year. Cancel anytime.")
+                        Text("Then \(paywallProPrice)/year. Cancel anytime.")
                             .font(.custom("Poppins-Regular", size: 13))
                             .foregroundColor(Color(white: 0.42))
                     }
@@ -1444,7 +1486,7 @@ struct OnboardingViewV2: View {
                         Text("300 Thinks")
                             .font(.custom("HelveticaNeue-Bold", size: 17))
                             .foregroundColor(.white)
-                        Text("$59.99 for 6 months.")
+                        Text("\(paywallCorePrice) for 6 months.")
                             .font(.custom("Poppins-Regular", size: 13))
                             .foregroundColor(Color(white: 0.42))
                     }
@@ -1452,10 +1494,10 @@ struct OnboardingViewV2: View {
                 }
 
                 VStack(spacing: 8) {
-                    pwPlanCard(0, "PRO — Unlimited", "$99.99/year", "7 Days Free",
+                    pwPlanCard(0, "PRO — Unlimited", paywallProPrice, "7 Days Free",
                                ["unlimited thinks", "deeper simulations", "pattern memory", "faster reasoning"],
                                "billed annually")
-                    pwPlanCard(1, "CORE", "$59.99 / 6 months", "300 Thinks",
+                    pwPlanCard(1, "CORE", paywallCorePrice, "300 Thinks",
                                ["300 thinks", "full simulation access", "pattern tracking"],
                                "billed every 6 months")
                 }
@@ -1467,8 +1509,8 @@ struct OnboardingViewV2: View {
                         if let package = viewModel.currentOffering?.availablePackages.first(where: {
                             $0.storeProduct.productIdentifier == productId
                         }) {
-                            await viewModel.purchase(package: package)
-                            if viewModel.purchasedTier == .pro || viewModel.purchasedTier == .core {
+                            let success = await viewModel.purchase(package: package)
+                            if success {
                                 advanceNoHistory()
                             }
                         } else {
@@ -1479,7 +1521,7 @@ struct OnboardingViewV2: View {
                         }
                     }
                 } label: {
-                    Text(selectedPlan == 0 ? "start my 7-day free trial" : "get Core — 300 thinks for $59.99")
+                    Text(selectedPlan == 0 ? "start my 7-day free trial" : "get Core")
                         .font(.custom("HelveticaNeue-Bold", size: 17))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
@@ -1510,8 +1552,8 @@ struct OnboardingViewV2: View {
                     .buttonStyle(PlainButtonStyle())
                     Button {
                         Task {
-                            await viewModel.restorePurchases()
-                            if viewModel.purchasedTier == .pro || viewModel.purchasedTier == .core {
+                            let restored = await viewModel.restorePurchases()
+                            if restored {
                                 advanceNoHistory()
                             } else {
                                 await MainActor.run {
@@ -1543,6 +1585,12 @@ struct OnboardingViewV2: View {
             PostHogSDK.shared.capture("paywall_viewed")
             Task {
                 await viewModel.fetchOfferings()
+                if let pro = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual" }) {
+                    paywallProPrice = pro.storeProduct.localizedPriceString
+                }
+                if let core = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths" }) {
+                    paywallCorePrice = core.storeProduct.localizedPriceString
+                }
             }
         }
         .alert("Purchase Failed", isPresented: $showPurchaseError) {
@@ -1798,6 +1846,14 @@ struct OnboardingViewV2: View {
         }
     }
 
+    private func startGoodNewsRollingCycle() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            guard goodNewsRolling else { return }
+            withAnimation(.easeInOut(duration: 0.4)) { rollingPhrase += 1 }
+            startGoodNewsRollingCycle()
+        }
+    }
+
     // MARK: Step 15 — good news
 
     private var goodNewsView: some View {
@@ -1824,12 +1880,14 @@ struct OnboardingViewV2: View {
                             .fixedSize(horizontal: false, vertical: true)
                             .opacity(goodNewsPhase >= 2 ? 1 : 0)
                         ZStack(alignment: .leading) {
+                            let curr = rollingPhrase % rollingPhrases.count
+                            let prev = (rollingPhrase - 1 + rollingPhrases.count) % rollingPhrases.count
                             ForEach(0..<rollingPhrases.count, id: \.self) { i in
                                 Text(rollingPhrases[i])
                                     .font(.custom("HelveticaNeue-Light", size: 32))
                                     .foregroundColor(.white)
-                                    .opacity(rollingPhrase == i ? 1 : 0)
-                                    .offset(y: rollingPhrase == i ? 0 : (rollingPhrase > i ? -20 : 20))
+                                    .opacity(curr == i ? 1 : 0)
+                                    .offset(y: curr == i ? 0 : (prev == i ? -20 : 20))
                                     .animation(.easeInOut(duration: 0.4), value: rollingPhrase)
                             }
                         }
@@ -1844,6 +1902,7 @@ struct OnboardingViewV2: View {
                     .padding(.horizontal, 36)
                     Spacer()
                     Button {
+                        goodNewsRolling = false
                         withAnimation(.easeInOut(duration: 0.4)) { goodNewsPhase = 0 }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { advanceNoHistory() }
                     } label: {
@@ -1903,6 +1962,7 @@ struct OnboardingViewV2: View {
                     .padding(.horizontal, 36)
                     Spacer()
                     Button {
+                        goodNewsRolling = false
                         withAnimation(.easeInOut(duration: 0.4)) { goodNewsPhase = 0 }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { advanceNoHistory() }
                     } label: {
@@ -1924,29 +1984,23 @@ struct OnboardingViewV2: View {
         .onAppear {
             goodNewsPhase = 0
             rollingPhrase = 0
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                withAnimation(.easeIn(duration: 0.6)) { goodNewsPhase = 1 }
+            goodNewsRolling = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                withAnimation(.easeIn(duration: 0.5)) { goodNewsPhase = 1 }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
-                withAnimation(.easeIn(duration: 0.6)) { goodNewsPhase = 2 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                withAnimation(.easeIn(duration: 0.5)) { goodNewsPhase = 2 }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.1) {
-                withAnimation(.easeIn(duration: 0.6)) { goodNewsPhase = 3 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                withAnimation(.easeIn(duration: 0.5)) { goodNewsPhase = 3 }
+                goodNewsRolling = true
+                startGoodNewsRollingCycle()
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.1) {
-                withAnimation(.easeInOut(duration: 0.4)) { rollingPhrase = 1 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.3) {
+                withAnimation(.easeIn(duration: 0.5)) { goodNewsPhase = 4 }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 4.1) {
-                withAnimation(.easeInOut(duration: 0.4)) { rollingPhrase = 2 }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5.1) {
-                withAnimation(.easeInOut(duration: 0.4)) { rollingPhrase = 3 }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5.7) {
-                withAnimation(.easeIn(duration: 0.6)) { goodNewsPhase = 4 }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 6.7) {
-                withAnimation(.easeIn(duration: 0.6)) { goodNewsPhase = 5 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.6) {
+                withAnimation(.easeIn(duration: 0.4)) { goodNewsPhase = 5 }
             }
         }
     }
@@ -2022,6 +2076,8 @@ struct OnboardingViewV2: View {
     // MARK: - Flow
 
     private func startTyping() {
+        typingGeneration += 1
+        let gen = typingGeneration
         contentVisible = false
         let specialSteps = [12, 13, 14, 15, 16, 18, 19, 20, 21]
         if specialSteps.contains(step) { return }
@@ -2036,9 +2092,11 @@ struct OnboardingViewV2: View {
         let chars = Array(text)
         for (i, char) in chars.enumerated() {
             DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.022) {
+                guard typingGeneration == gen else { return }
                 typedText.append(char)
                 if i == chars.count - 1 {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        guard typingGeneration == gen else { return }
                         withAnimation(.easeIn(duration: 0.3)) { contentVisible = true }
                     }
                 }
@@ -2062,6 +2120,7 @@ struct OnboardingViewV2: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
             isTransitioning = false
             step += 1
+            UserDefaults.standard.set(step, forKey: Constants.onboardingProgressKey)
             PostHogSDK.shared.capture("onboarding_step_viewed", properties: [
                 "step": step,
                 "step_name": onboardingStepName(step)
@@ -2080,8 +2139,13 @@ struct OnboardingViewV2: View {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.48) {
             isTransitioning = false
-            if step >= 22 { onComplete(); return }
+            if step >= 22 {
+                UserDefaults.standard.removeObject(forKey: Constants.onboardingProgressKey)
+                onComplete()
+                return
+            }
             step += 1
+            UserDefaults.standard.set(step, forKey: Constants.onboardingProgressKey)
             PostHogSDK.shared.capture("onboarding_step_viewed", properties: [
                 "step": step,
                 "step_name": onboardingStepName(step)
@@ -2102,12 +2166,16 @@ struct OnboardingViewV2: View {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
             isTransitioning = false
+            typingGeneration += 1
+            let gen = typingGeneration
             let chars = Array(reflection)
             for (k, char) in chars.enumerated() {
                 DispatchQueue.main.asyncAfter(deadline: .now() + Double(k) * 0.022) {
+                    guard typingGeneration == gen else { return }
                     typedText.append(char)
                     if k == chars.count - 1 {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                            guard typingGeneration == gen else { return }
                             advance(q: reflection, a: "")
                         }
                     }

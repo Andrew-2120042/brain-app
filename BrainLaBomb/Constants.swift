@@ -16,6 +16,7 @@ enum Constants {
 
     // MARK: - App
     static let thinksUsedKey = "thinksUsed"
+    static let onboardingProgressKey = "onboardingProgress"
     static let trialDays = 7
     static let trialDaysString = "7 days"
     static let thinkHistoryKey = "thinkHistory"

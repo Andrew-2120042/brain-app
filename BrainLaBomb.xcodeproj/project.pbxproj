@@ -33,7 +33,6 @@
 		AA112233BB004455CC006677 /* 1780313101639601.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = AA112233BB004455CC006678 /* 1780313101639601.mp4 */; };
 		AFF131F024DFF9D1D1C287A2 /* Poppins-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 2C985A3C78686F01AB718A0F /* Poppins-Medium.ttf */; };
 		B0597096F9D182E90C0A68D6 /* ParticleField.swift in Sources */ = {isa = PBXBuildFile; fileRef = CBE6F5697E11A95DFCEE4E4E /* ParticleField.swift */; };
-		BB001122CC003344DD005566 /* loop_10s_hd-4.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = BB001122CC003344DD005567 /* loop_10s_hd-4.mp4 */; };
 		CC001122DD003344EE005566 /* loop_10s_hd-14.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = CC001122DD003344EE005567 /* loop_10s_hd-14.mp4 */; };
 		BB223344CC005566DD007788 /* ascii_export-2.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = BB223344CC005566DD007789 /* ascii_export-2.mp4 */; };
 		BC9F17847F7105F897C94AD1 /* DecisionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 714831E37F54C42EB5B003FE /* DecisionCard.swift */; };
@@ -87,7 +86,6 @@
 		A5350C3786E92E14442288B1 /* SimulatingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimulatingView.swift; sourceTree = "<group>"; };
 		A8C9556847546A916085A919 /* InputPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputPageView.swift; sourceTree = "<group>"; };
 		AA112233BB004455CC006678 /* 1780313101639601.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = 1780313101639601.mp4; sourceTree = "<group>"; };
-		BB001122CC003344DD005567 /* loop_10s_hd-4.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "loop_10s_hd-4.mp4"; sourceTree = "<group>"; };
 		CC001122DD003344EE005567 /* loop_10s_hd-14.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "loop_10s_hd-14.mp4"; sourceTree = "<group>"; };
 		BB223344CC005566DD007789 /* ascii_export-2.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ascii_export-2.mp4"; sourceTree = "<group>"; };
 		C2D5F8A1B3E4961078D2F935 /* OnboardingViewV2.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewV2.swift; sourceTree = "<group>"; };
@@ -164,7 +162,6 @@
 				AA112233BB004455CC006678 /* 1780313101639601.mp4 */,
 				BB223344CC005566DD007789 /* ascii_export-2.mp4 */,
 				CC334455DD006677EE008800 /* ascii_export-3.mp4 */,
-				BB001122CC003344DD005567 /* loop_10s_hd-4.mp4 */,
 				CC001122DD003344EE005567 /* loop_10s_hd-14.mp4 */,
 				714831E37F54C42EB5B003FE /* DecisionCard.swift */,
 				49E6F6A2A9C1654C6B95133C /* DecisionCardView.swift */,
@@ -268,7 +265,6 @@
 				E89A66FA4B1A39C023E20378 /* Poppins-Regular.ttf in Resources */,
 				FB1B1DD2E252FA106B128A75 /* bg_noise.png in Resources */,
 				4540E4D6AA3D1D8F23D19D3C /* card_a1.mov in Resources */,
-				BB001122CC003344DD005566 /* loop_10s_hd-4.mp4 in Resources */,
 				CC001122DD003344EE005566 /* loop_10s_hd-14.mp4 in Resources */,
 				DD001122EE003344FF005566 /* loop_10s_hd-7.mp4 in Resources */,
 				FF001122AA003344BB005566 /* loop_10s_hd-10.mov in Resources */,

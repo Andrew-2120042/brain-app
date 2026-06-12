@@ -77,8 +77,8 @@ struct PaywallView: View {
                 Spacer()
 
                 VStack(spacing: 10) {
-                    paywallPlanCard(index: 0, title: "CORE", price: "$59.99", subtitle: "300 thinks · 6 months", detail: "everything unlocked", isProBadge: false)
-                    paywallPlanCard(index: 1, title: "PRO", price: "$99.99/year", subtitle: "unlimited thinks", detail: "chat + full memory", isProBadge: true)
+                    paywallPlanCard(index: 0, title: "CORE", price: corePrice, subtitle: "300 thinks · 6 months", detail: "everything unlocked", isProBadge: false)
+                    paywallPlanCard(index: 1, title: "PRO", price: proPrice, subtitle: "unlimited thinks", detail: "chat + full memory", isProBadge: true)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
@@ -106,7 +106,7 @@ struct PaywallView: View {
                         }
                     }
                 }) {
-                    Text(selectedPlan == 0 ? "get Core — 300 thinks for $59.99" : "start my 7-day free trial")
+                    Text(selectedPlan == 0 ? "get Core" : "start my 7-day free trial")
                         .font(.custom("HelveticaNeue", size: 17))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
@@ -121,8 +121,8 @@ struct PaywallView: View {
                 HStack(spacing: 16) {
                     Button(action: {
                         Task {
-                            await viewModel.restorePurchases()
-                            if viewModel.purchasedTier != .pro && viewModel.purchasedTier != .core {
+                            let restored = await viewModel.restorePurchases()
+                            if !restored {
                                 await MainActor.run {
                                     purchaseErrorMessage = "No active subscription found for this Apple ID."
                                     showPurchaseError = true
@@ -158,12 +158,12 @@ struct PaywallView: View {
                 .padding(.bottom, 8)
 
                 if selectedPlan == 1 {
-                    Text("7 days free, then $99.99/year. Cancel anytime.")
+                    Text("7 days free, then \(proPrice)/year. Cancel anytime.")
                         .font(.custom("HelveticaNeue", size: 11))
                         .foregroundColor(Color(white: 0.3))
                         .padding(.bottom, 32)
                 } else {
-                    Text("300 thinks. $59.99 for 6 months. Cancel anytime.")
+                    Text("300 thinks. \(corePrice) for 6 months. Cancel anytime.")
                         .font(.custom("HelveticaNeue", size: 11))
                         .foregroundColor(Color(white: 0.3))
                         .padding(.bottom, 32)
@@ -227,6 +227,18 @@ struct PaywallView: View {
                 dismiss()
             }
         }
+    }
+
+    private var proPrice: String {
+        viewModel.currentOffering?.availablePackages
+            .first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual" })?
+            .storeProduct.localizedPriceString ?? "$99.99"
+    }
+
+    private var corePrice: String {
+        viewModel.currentOffering?.availablePackages
+            .first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths" })?
+            .storeProduct.localizedPriceString ?? "$59.99"
     }
 
     private func paywallPlanCard(index: Int, title: String, price: String, subtitle: String, detail: String, isProBadge: Bool) -> some View {

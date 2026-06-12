@@ -266,6 +266,7 @@ struct SettingsView: View {
             sectionHeader("debug")
             settingsRow(label: "replay onboarding", action: {
                 UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                UserDefaults.standard.removeObject(forKey: Constants.onboardingProgressKey)
                 NotificationCenter.default.post(name: .replayOnboarding, object: nil)
                 dismiss()
             })
