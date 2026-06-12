@@ -9,6 +9,12 @@ struct PaywallView: View {
     @State private var dragOffset: CGFloat = 0
     @State private var showPurchaseError = false
     @State private var purchaseErrorMessage = ""
+    @State private var showDocs = false
+    @State private var docsTab = 0
+    @State private var showConfirmation = false
+    @State private var confirmationTier: AppTier = .core
+    @State private var proPrice: String = "$99.99"
+    @State private var corePrice: String = "$59.99"
 
     private var paywallVideoURL: URL? {
         Bundle.main.url(forResource: "paywall_bg", withExtension: "mov")
@@ -136,9 +142,8 @@ struct PaywallView: View {
                     }
                     Text("·").foregroundColor(Color(white: 0.15))
                     Button {
-                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/privacy-policy-3647cd351f5b807b9021d48d42a71a0b") {
-                            UIApplication.shared.open(url)
-                        }
+                        docsTab = 1
+                        showDocs = true
                     } label: {
                         Text("privacy")
                             .font(.custom("HelveticaNeue", size: 12))
@@ -146,9 +151,8 @@ struct PaywallView: View {
                     }
                     Text("·").foregroundColor(Color(white: 0.15))
                     Button {
-                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/Terms-and-conditions-3647cd351f5b8000b482d1062d00f0ad") {
-                            UIApplication.shared.open(url)
-                        }
+                        docsTab = 0
+                        showDocs = true
                     } label: {
                         Text("terms")
                             .font(.custom("HelveticaNeue", size: 12))
@@ -209,6 +213,20 @@ struct PaywallView: View {
             PostHogSDK.shared.capture("paywall_viewed")
             Task {
                 await viewModel.fetchOfferings()
+                if let pro = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual" }) {
+                    proPrice = pro.storeProduct.localizedPriceString
+                }
+                if let core = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths" }) {
+                    corePrice = core.storeProduct.localizedPriceString
+                }
+                #if DEBUG
+                switch UserDefaults.standard.string(forKey: "debug_currencyPreview") ?? "off" {
+                case "USD": proPrice = "$99.99";      corePrice = "$59.99"
+                case "GBP": proPrice = "£79.99";      corePrice = "£49.99"
+                case "SGD": proPrice = "S$129.99";    corePrice = "S$79.99"
+                default: break
+                }
+                #endif
             }
         }
         .alert("Purchase Failed", isPresented: $showPurchaseError) {
@@ -216,29 +234,21 @@ struct PaywallView: View {
         } message: {
             Text(purchaseErrorMessage)
         }
-        .onChange(of: viewModel.purchasedTier) { newTier in
-            if newTier == .pro {
-                PostHogSDK.shared.capture("purchase_completed", properties: ["tier": "pro"])
-            } else if newTier == .core {
-                PostHogSDK.shared.capture("purchase_completed", properties: ["tier": "core"])
-            }
-            if newTier == .pro || newTier == .core {
+        .sheet(isPresented: $showDocs) { DocsView(initialTab: docsTab) }
+        .fullScreenCover(isPresented: $showConfirmation) {
+            PaymentConfirmationView(tier: confirmationTier) {
+                showConfirmation = false
                 onDismiss?()
                 dismiss()
             }
         }
-    }
-
-    private var proPrice: String {
-        viewModel.currentOffering?.availablePackages
-            .first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual" })?
-            .storeProduct.localizedPriceString ?? "$99.99"
-    }
-
-    private var corePrice: String {
-        viewModel.currentOffering?.availablePackages
-            .first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths" })?
-            .storeProduct.localizedPriceString ?? "$59.99"
+        .onChange(of: viewModel.hasActiveEntitlement) { hasIt in
+            guard hasIt, !showConfirmation else { return }
+            let tier = viewModel.purchasedTier
+            PostHogSDK.shared.capture("purchase_completed", properties: ["tier": tier == .pro ? "pro" : "core"])
+            confirmationTier = tier
+            showConfirmation = true
+        }
     }
 
     private func paywallPlanCard(index: Int, title: String, price: String, subtitle: String, detail: String, isProBadge: Bool) -> some View {

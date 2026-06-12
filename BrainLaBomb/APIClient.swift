@@ -327,23 +327,18 @@ struct APIClient {
         - How long sitting with decision: \(duration)
         - Where they are right now: \(currentState)
 
-        Write exactly 4 lines. No more. No fewer.
+        Write one short paragraph. 3-4 sentences. No line breaks. No bullet points.
 
-        Line 1: one trait observation using their frequency answer. Under 10 words. Start with "you".
-        Line 2: one trait observation using their blocker or duration answer. Under 10 words. Start with "you".
-        Line 3: one insight connecting both traits into a pattern they haven't named. Under 15 words. Do not start with "you".
-        Line 4: one reframe. Under 10 words. Does not start with "you". Relieves shame without dismissing reality.
+        The paragraph should: open with a direct observation about their pattern, name what drives it, then close with a reframe that relieves shame without dismissing reality.
 
-        Total word count across all 4 lines must be under 45 words.
-        No blank lines between lines.
-        No bullet points. No numbering. No labels.
-        Return only the 4 lines. Nothing else. No quotes. No explanation.
+        Total word count: under 55 words.
+        Second person throughout. Lowercase. No quotes. Return only the paragraph. Nothing else.
         """
 
         let body: [String: Any] = [
             "model": "claude-haiku-4-5-20251001",
-            "max_tokens": 80,
-            "system": "You write precise personalised psychological pattern reveals for a decision-making app. Follow the structure given exactly. Never add extra content. Never use therapeutic language. Never use the word 'however'. Sound like a perceptive friend who sees patterns clearly.",
+            "max_tokens": 100,
+            "system": "You write precise personalised psychological pattern reveals for a decision-making app. One short paragraph. Never use therapeutic language. Never use the word 'however'. Sound like a perceptive friend who sees patterns clearly.",
             "messages": [
                 ["role": "user", "content": prompt]
             ]

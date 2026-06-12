@@ -82,11 +82,11 @@ struct StoriesView: View {
     }
 
     private var isPaidTier: Bool {
-        viewModel.debugTier == .core || viewModel.debugTier == .pro // TODO: replace with RevenueCat
+        viewModel.hasActiveEntitlement
     }
 
     private var canChat: Bool {
-        viewModel.debugTier == .pro // TODO: replace with RevenueCat
+        viewModel.hasActiveEntitlement && viewModel.currentTier == .pro
     }
 
     private var historyInsightText: String {

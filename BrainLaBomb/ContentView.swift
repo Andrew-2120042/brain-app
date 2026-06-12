@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @StateObject private var viewModel = AppViewModel()
     @State private var showOnboarding = !UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
+    @State private var showPaywall = false
 
     var body: some View {
         ZStack {
@@ -69,14 +70,21 @@ struct ContentView: View {
                         viewModel.updateChatMessages(messages, forThinkID: id)
                     }
                 ) {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        viewModel.appState = .input
+                    if viewModel.hasActiveEntitlement {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            viewModel.appState = .input
+                        }
+                    } else {
+                        showPaywall = true
                     }
                 }
                 .transition(.opacity)
             }
         }
         .animation(.easeInOut(duration: 0.35), value: screenKey)
+        .fullScreenCover(isPresented: $showPaywall) {
+            PaywallView(viewModel: viewModel, onDismiss: { showPaywall = false })
+        }
         .fullScreenCover(isPresented: $showOnboarding, onDismiss: nil) {
             OnboardingViewV2(viewModel: viewModel) {
                 UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")

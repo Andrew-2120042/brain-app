@@ -1751,7 +1751,7 @@ enum Constants {
     Rules for pattern identity:
     Read the actual think history carefully. Find the real pattern not a guess.
     The name must be earned by the data not assigned generically.
-    description: one line, lowercase, no period, second person, specific.
+    description: a single flowing paragraph of 4-5 sentences. lowercase throughout. second person. no bullet points. no line breaks. reads as one cohesive block. each sentence connects to the next. specific to their actual pattern — not generic. the paragraph should move from observation → implication → what it costs or enables → what it says about how they actually live.
     insight: one sentence that goes one layer deeper. what this pattern reveals about how they actually move through life. this is the line they will screenshot.
     percentage: believable. Never below 12, never above 29. Odd numbers feel more real.
     If there is genuinely no clear pattern yet — return needsMoreData: true and nothing else.
@@ -1789,7 +1789,7 @@ enum Constants {
       "needsMoreData": false,
       "patternIdentity": {
         "name": "The Family Man",
-        "description": "thinks with his people in mind first, always",
+        "description": "you consistently frame decisions around how they'll land for the people closest to you before you ever ask what you actually want. that instinct runs deep enough that it rarely feels like a choice — it just feels like how decisions work. the pattern has kept the peace and held things together, but it means your own needs get processed last, if at all. over time that creates a quiet kind of friction: you end up living inside choices that were made for other people. the question isn't whether you care about them — it's whether you've given yourself the same weight.",
         "percentage": 17,
         "insight": "your decisions aren't really about you. they never were."
       },

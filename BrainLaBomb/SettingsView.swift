@@ -7,7 +7,8 @@ struct SettingsView: View {
     @State private var notificationsEnabled = false
     @State private var showResetHistoryConfirmation = false
     @State private var showPaywall = false
-
+    @State private var showDocs = false
+    @State private var docsTab = 0
     var body: some View {
         ZStack {
             Color(hex: "#0A0A0A").ignoresSafeArea()
@@ -38,7 +39,8 @@ struct SettingsView: View {
             }
         }
         .onAppear { checkNotificationStatus() }
-        .sheet(isPresented: $showPaywall) { PaywallView(viewModel: viewModel) }
+        .fullScreenCover(isPresented: $showPaywall) { PaywallView(viewModel: viewModel, onDismiss: { showPaywall = false }) }
+        .sheet(isPresented: $showDocs) { DocsView(initialTab: docsTab) }
     }
 
     // MARK: - Header
@@ -70,13 +72,13 @@ struct SettingsView: View {
                     .font(.custom("HelveticaNeue", size: 15))
                     .foregroundColor(Color(white: 0.6))
                 Spacer()
-                Text(viewModel.currentTier == .pro ? "pro" : "core")
+                Text(viewModel.hasActiveEntitlement ? (viewModel.currentTier == .pro ? "pro" : "core") : "free")
                     .font(.custom("HelveticaNeue", size: 15))
                     .foregroundColor(.white)
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 14)
-            if viewModel.currentTier == .core {
+            if viewModel.hasActiveEntitlement && viewModel.currentTier == .core {
                 settingsRow(
                     label: "thinks used",
                     value: "\(viewModel.coreThinksUsed) of \(viewModel.coreThinkLimit)"
@@ -85,7 +87,7 @@ struct SettingsView: View {
                     label: "\(viewModel.coreThinksRemaining) thinks remaining",
                     value: nil
                 )
-            } else {
+            } else if viewModel.hasActiveEntitlement {
                 settingsRow(
                     label: "chat messages this month",
                     value: "\(viewModel.monthlyChatCount)"
@@ -144,14 +146,12 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             sectionHeader("about")
             settingsRow(label: "privacy policy", action: {
-                if let url = URL(string: "https://creative-sailfish-dc6.notion.site/privacy-policy-3647cd351f5b807b9021d48d42a71a0b") {
-                    UIApplication.shared.open(url)
-                }
+                docsTab = 1
+                showDocs = true
             })
             settingsRow(label: "terms of service", action: {
-                if let url = URL(string: "https://creative-sailfish-dc6.notion.site/Terms-and-conditions-3647cd351f5b8000b482d1062d00f0ad") {
-                    UIApplication.shared.open(url)
-                }
+                docsTab = 0
+                showDocs = true
             })
             settingsRow(
                 label: "version",
@@ -260,6 +260,10 @@ struct SettingsView: View {
 
     #if DEBUG
     @AppStorage("useConversationalOnboarding") private var useConversational = true
+    @AppStorage("useNumericIntro") private var useNumericIntro = false
+    @AppStorage("debug_currencyPreview") private var currencyPreview = "off"
+
+    private let currencyCycle = ["off", "USD", "GBP", "SGD"]
 
     private var debugSection: some View {
         VStack(spacing: 0) {
@@ -274,6 +278,30 @@ struct SettingsView: View {
                 dismiss()
                 viewModel.appState = .processingFirst
             })
+            Button {
+                let idx = (currencyCycle.firstIndex(of: currencyPreview) ?? 0) + 1
+                currencyPreview = currencyCycle[idx % currencyCycle.count]
+            } label: {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("paywall currency preview")
+                            .font(.system(size: 15, weight: .regular))
+                            .foregroundColor(.white)
+                        Text(currencyPreview == "off" ? "using real prices" : "showing \(currencyPreview) prices")
+                            .font(.system(size: 11, weight: .regular))
+                            .foregroundColor(Color(white: 0.35))
+                    }
+                    Spacer()
+                    Text(currencyPreview)
+                        .font(.system(size: 13, weight: .medium, design: .monospaced))
+                        .foregroundColor(currencyPreview == "off" ? Color(white: 0.35) : Color(red: 0.18, green: 0.78, blue: 0.72))
+                        .padding(.horizontal, 10).padding(.vertical, 5)
+                        .background(Color(white: 0.10).clipShape(Capsule()))
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
+            }
+            .buttonStyle(PlainButtonStyle())
             HStack {
                 Text("hide debug UI")
                     .font(.system(size: 15, weight: .regular))
@@ -292,6 +320,23 @@ struct SettingsView: View {
                     .foregroundColor(.white)
                 Spacer()
                 Toggle("", isOn: $useConversational)
+                    .labelsHidden()
+                    .tint(Color.white)
+            }
+            .padding(.horizontal, 24)
+            .padding(.vertical, 14)
+
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("numeric intro animation")
+                        .font(.system(size: 15, weight: .regular))
+                        .foregroundColor(.white)
+                    Text(useNumericIntro ? "version B (probability/numbers)" : "version A (typewriter)")
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundColor(Color(white: 0.35))
+                }
+                Spacer()
+                Toggle("", isOn: $useNumericIntro)
                     .labelsHidden()
                     .tint(Color.white)
             }

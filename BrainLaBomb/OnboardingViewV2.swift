@@ -6,6 +6,41 @@ import PostHog
 // One unified space. Every thought types in at the same anchor.
 // History fades upward. No pages. No screen switches.
 
+struct NumericIntroParticle: Identifiable {
+    let id = UUID()
+    var position: CGPoint
+    let targetPosition: CGPoint
+    let isBracketCell: Bool
+    var hex: String
+    var currentOpacity: Double = 0
+    var currentScale: CGFloat = 1.0
+}
+
+// Proportional bracket: matches the digit-bracket (4 cells wide × 14 rows tall).
+// Horizontal bars = 1/14 of height. Vertical bar = 1/2 of width.
+struct BracketShape: Shape {
+    enum Side { case left, right }
+    let side: Side
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        let w = rect.width
+        let h = rect.height
+        let barH = h / 14.0
+        let vertW = w / 2.0
+
+        p.addRect(CGRect(x: 0, y: 0, width: w, height: barH))
+        p.addRect(CGRect(x: 0, y: h - barH, width: w, height: barH))
+        switch side {
+        case .left:
+            p.addRect(CGRect(x: 0, y: 0, width: vertW, height: h))
+        case .right:
+            p.addRect(CGRect(x: w - vertW, y: 0, width: vertW, height: h))
+        }
+        return p
+    }
+}
+
 struct OnboardingViewV2: View {
     var viewModel: AppViewModel
     var onComplete: () -> Void
@@ -52,9 +87,16 @@ struct OnboardingViewV2: View {
     @State private var buildDone = false
     @State private var showPurchaseError = false
     @State private var purchaseErrorMessage = ""
+    @State private var showDocs = false
+    @State private var docsTab = 0
     @State private var typingGeneration = 0
     @State private var paywallProPrice = "$99.99"
     @State private var paywallCorePrice = "$59.99"
+    @State private var showOnboardingConfirmation = false
+    @State private var onboardingConfirmationTier: AppTier = .core
+
+    @AppStorage("useNumericIntro") private var useNumericIntro = false
+    @State private var numericParticles: [NumericIntroParticle] = []
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -75,94 +117,94 @@ struct OnboardingViewV2: View {
     private let anchorTexts = [
         "You already know\nwhat you should do.",                            // 0
         "This isn't advice.",                                               // 1
-        "before we begin.",                                                 // 2
-        "what should I call you?",                                          // 3
-        "how old are you?",                                                 // 4
-        "how often do you face decisions\nyou can't stop thinking about?",  // 5
-        "what do you struggle\nwith most?",                                 // 6
-        "when do you usually\nface these moments?",                         // 7
-        "what stops you from trusting\nyour instincts?",                    // 8
-        "how long have you been sitting\nwith your most recent big decision?", // 9
-        "right now — what best describes\nwhere you are?",                  // 10
-        "building your brain.",                                             // 11
+        "Before we begin.",                                                 // 2
+        "What should I call you?",                                          // 3
+        "How old are you?",                                                 // 4
+        "How often do you face decisions\nyou can't stop thinking about?",  // 5
+        "What do you struggle\nwith most?",                                 // 6
+        "When do you usually\nface these moments?",                         // 7
+        "What stops you from trusting\nyour instincts?",                    // 8
+        "How long have you been sitting\nwith your most recent big decision?", // 9
+        "Right now — what best describes\nwhere you are?",                  // 10
+        "Building your brain.",                                             // 11
         "",                                                                 // 12 full-screen black transition
         "",                                                                 // 13 full-screen pattern reveal
         "",                                                                 // 14 full-screen bad news
         "",                                                                 // 15 full-screen good news
         "",                                                                 // 16 full-screen how we help
-        "your brain\nis calibrated.",                                       // 17
+        "Your brain\nis calibrated.",                                       // 17
         "",                                                                 // 18 full-screen features/value
         "",                                                                 // 19 full-screen paywall
         "",                                                                 // 20 full-screen nudge/notifications
-        "you're ready."                                                     // 21
+        "You're ready."                                                     // 21
     ]
 
     private let quizReflections: [[String]] = [
         // Step 5 — frequency
-        ["that means you're always carrying something.",
-         "enough to know the feeling well.",
-         "but when it hits it hits hard.",
-         "the ones that matter always feel that way."],
+        ["That means you're always carrying something.",
+         "Enough to know the feeling well.",
+         "But when it hits it hits hard.",
+         "The ones that matter always feel that way."],
         // Step 6 — struggle (Haiku-generated, these are fallbacks)
-        ["harder than it sounds. most people never figure it out.",
-         "you already know the answer. you're building the case against it.",
-         "emotion isn't the enemy. confusion is.",
-         "you're deciding for an audience that isn't watching."],
+        ["Harder than it sounds. Most people never figure it out.",
+         "You already know the answer. You're building the case against it.",
+         "Emotion isn't the enemy. Confusion is.",
+         "You're deciding for an audience that isn't watching."],
         // Step 7 — when
-        ["that's when the real thinking happens.",
-         "when the stakes are highest the noise is loudest.",
-         "the hardest decisions always involve someone else.",
-         "the two things that were never supposed to mix."],
+        ["That's when the real thinking happens.",
+         "When the stakes are highest the noise is loudest.",
+         "The hardest decisions always involve someone else.",
+         "The two things that were never supposed to mix."],
         // Step 8 — why can't you trust your instincts
-        ["being wrong once is survivable.\nstaying stuck forever isn't.",
-         "you're deciding for an audience\nthat isn't watching as closely as you think.",
-         "commitment isn't the problem.\nnot knowing if it's the right thing to commit to is.",
-         "not knowing why you can't trust yourself\nis the most honest answer here."],
+        ["Being wrong once is survivable.\nStaying stuck forever isn't.",
+         "You're deciding for an audience\nthat isn't watching as closely as you think.",
+         "Commitment isn't the problem.\nNot knowing if it's the right thing to commit to is.",
+         "Not knowing why you can't trust yourself\nis the most honest answer here."],
         // Step 9 — how long
-        ["still fresh. the noise hasn't peaked yet.",
-         "long enough that it's starting to feel permanent.\nit isn't.",
-         "months of carrying something\nthat deserves an answer.",
-         "that's not indecision.\nthat's a decision that's been waiting\nlonger than it should have."],
+        ["Still fresh. The noise hasn't peaked yet.",
+         "Long enough that it's starting to feel permanent.\nIt isn't.",
+         "Months of carrying something\nthat deserves an answer.",
+         "That's not indecision.\nThat's a decision that's been waiting\nlonger than it should have."],
         // Step 10 — where are you
-        ["both options feel right\nbecause you haven't run them forward yet.",
-         "knowing and doing are separated\nby exactly one thing. trust.",
-         "that's the most honest place to start from.",
-         "processing and deciding aren't the same thing.\nyou need both.",
-         "whatever it is — you brought it here.\nthat's enough to start."]
+        ["Both options feel right\nbecause you haven't run them forward yet.",
+         "Knowing and doing are separated\nby exactly one thing. Trust.",
+         "That's the most honest place to start from.",
+         "Processing and deciding aren't the same thing.\nYou need both.",
+         "Whatever it is — you brought it here.\nThat's enough to start."]
     ]
 
     private let quizOptions: [[String]] = [
         // Step 5
-        ["constantly — almost every day",
-         "often — a few times a week",
-         "sometimes — once in a while",
-         "rarely — but when I do they're heavy"],
+        ["Constantly — almost every day",
+         "Often — a few times a week",
+         "Sometimes — once in a while",
+         "Rarely — but when I do they're heavy"],
         // Step 6
-        ["knowing what I actually want",
-         "overthinking every angle",
-         "being too emotional to think clearly",
-         "caring too much what others think"],
+        ["Knowing what I actually want",
+         "Overthinking every angle",
+         "Being too emotional to think clearly",
+         "Caring too much what others think"],
         // Step 7
-        ["late at night when everything gets loud",
-         "during big life changes",
-         "when relationships get complicated",
-         "when work and life collide"],
+        ["Late at night when everything gets loud",
+         "During big life changes",
+         "When relationships get complicated",
+         "When work and life collide"],
         // Step 8
-        ["fear of being wrong",
-         "fear of what others will think",
-         "fear of commitment",
+        ["Fear of being wrong",
+         "Fear of what others will think",
+         "Fear of commitment",
          "I don't know — that's the problem"],
         // Step 9
-        ["a few days",
-         "a few weeks",
-         "months",
-         "honestly I can't remember when it started"],
+        ["A few days",
+         "A few weeks",
+         "Months",
+         "Honestly I can't remember when it started"],
         // Step 10
-        ["stuck between two options",
+        ["Stuck between two options",
          "I know what I should do but can't do it",
-         "completely lost — no idea what I want",
-         "something happened and I need to process it",
-         "something else — let me type it"]
+         "Completely lost — no idea what I want",
+         "Something happened and I need to process it",
+         "Something else — let me type it"]
     ]
 
     init(viewModel: AppViewModel, onComplete: @escaping () -> Void) {
@@ -212,6 +254,18 @@ struct OnboardingViewV2: View {
                 .padding(.top, 22)
                 .offset(y: geo.size.height * 0.44)
 
+                // ── Tap-to-continue overlay for intros (step 0 & 1) ──────────
+                if (step == 0 || step == 1) && contentVisible {
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard !isTransitioning else { return }
+                            let idx = step
+                            advance(q: anchorTexts[idx], a: "")
+                        }
+                        .zIndex(5)
+                }
+
                 // ── Full-screen special steps ────────────────────────────────
                 if step == 12 { blackTransitionView.transition(.opacity).zIndex(10) }
                 if step == 13 { patternRevealView.transition(.opacity).zIndex(10) }
@@ -252,16 +306,29 @@ struct OnboardingViewV2: View {
                     }
                 }
                 .opacity(bracketWordOpacity)
-                Text("[")
-                    .font(.custom("HelveticaNeue-Light", size: 32))
-                    .foregroundColor(.white)
-                    .opacity(leftBracketOpacity)
-                    .offset(x: leftBracketX)
-                Text("]")
-                    .font(.custom("HelveticaNeue-Light", size: 32))
-                    .foregroundColor(.white)
-                    .opacity(rightBracketOpacity)
-                    .offset(x: rightBracketX)
+                if useNumericIntro {
+                    BracketShape(side: .left)
+                        .fill(Color.white)
+                        .frame(width: 24, height: 70)
+                        .opacity(leftBracketOpacity)
+                        .offset(x: leftBracketX)
+                    BracketShape(side: .right)
+                        .fill(Color.white)
+                        .frame(width: 24, height: 70)
+                        .opacity(rightBracketOpacity)
+                        .offset(x: rightBracketX)
+                } else {
+                    Text("[")
+                        .font(.custom("HelveticaNeue-Light", size: 32))
+                        .foregroundColor(.white)
+                        .opacity(leftBracketOpacity)
+                        .offset(x: leftBracketX)
+                    Text("]")
+                        .font(.custom("HelveticaNeue-Light", size: 32))
+                        .foregroundColor(.white)
+                        .opacity(rightBracketOpacity)
+                        .offset(x: rightBracketX)
+                }
             }
         }
         .buttonStyle(PlainButtonStyle())
@@ -280,16 +347,29 @@ struct OnboardingViewV2: View {
                 }
             }
             .opacity(bracketWordOpacity)
-            Text("[")
-                .font(.custom("HelveticaNeue-Light", size: 32))
-                .foregroundColor(.white)
-                .opacity(leftBracketOpacity)
-                .offset(x: leftBracketX)
-            Text("]")
-                .font(.custom("HelveticaNeue-Light", size: 32))
-                .foregroundColor(.white)
-                .opacity(rightBracketOpacity)
-                .offset(x: rightBracketX)
+            if useNumericIntro {
+                BracketShape(side: .left)
+                    .fill(Color.white)
+                    .frame(width: 24, height: 70)
+                    .opacity(leftBracketOpacity)
+                    .offset(x: leftBracketX)
+                BracketShape(side: .right)
+                    .fill(Color.white)
+                    .frame(width: 24, height: 70)
+                    .opacity(rightBracketOpacity)
+                    .offset(x: rightBracketX)
+            } else {
+                Text("[")
+                    .font(.custom("HelveticaNeue-Light", size: 32))
+                    .foregroundColor(.white)
+                    .opacity(leftBracketOpacity)
+                    .offset(x: leftBracketX)
+                Text("]")
+                    .font(.custom("HelveticaNeue-Light", size: 32))
+                    .foregroundColor(.white)
+                    .opacity(rightBracketOpacity)
+                    .offset(x: rightBracketX)
+            }
         }
         .allowsHitTesting(false)
         .scaleEffect(brandLogoScale)
@@ -339,6 +419,9 @@ struct OnboardingViewV2: View {
         .onAppear {
             if !showBrandIntro { startTyping() }
         }
+        .sheet(isPresented: $showDocs) {
+            DocsView(initialTab: docsTab)
+        }
     }
 
     // MARK: - Step content
@@ -372,11 +455,10 @@ struct OnboardingViewV2: View {
                 .font(.custom("Poppins-Regular", size: 17))
                 .foregroundColor(.white.opacity(0.40))
                 .lineSpacing(6)
-        }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                advance(q: anchorTexts[0], a: "")
-            }
+            Spacer().frame(height: 28)
+            Text("Tap to continue")
+                .font(.custom("Poppins-Regular", size: 12))
+                .foregroundColor(.white.opacity(0.25))
         }
     }
 
@@ -389,11 +471,10 @@ struct OnboardingViewV2: View {
                 .font(.custom("Poppins-Regular", size: 17))
                 .foregroundColor(.white.opacity(0.40))
                 .lineSpacing(6)
-        }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                advance(q: anchorTexts[1], a: "")
-            }
+            Spacer().frame(height: 28)
+            Text("Tap to continue")
+                .font(.custom("Poppins-Regular", size: 12))
+                .foregroundColor(.white.opacity(0.25))
         }
     }
 
@@ -402,7 +483,7 @@ struct OnboardingViewV2: View {
     private var step2: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer().frame(height: 12)
-            Text("your answers may be processed by AI to generate your results.")
+            Text("Your answers may be processed by AI to generate your results.")
                 .font(.custom("Poppins-Regular", size: 17))
                 .foregroundColor(.white.opacity(0.40))
                 .lineSpacing(6)
@@ -410,17 +491,16 @@ struct OnboardingViewV2: View {
             Spacer().frame(height: 30)
             v2Button("I understand and agree") {
                 UserDefaults.standard.set(true, forKey: "hasGivenAIConsent")
-                advance(q: anchorTexts[2], a: "agreed")
+                advance(q: anchorTexts[2], a: "Agreed")
             }
             Spacer().frame(height: 10)
             HStack {
                 Spacer()
                 Button {
-                    if let url = URL(string: "https://creative-sailfish-dc6.notion.site/privacy-policy-3647cd351f5b807b9021d48d42a71a0b") {
-                        UIApplication.shared.open(url)
-                    }
+                    docsTab = 1
+                    showDocs = true
                 } label: {
-                    Text("read our privacy policy")
+                    Text("Read our privacy policy")
                         .font(.custom("Poppins-Regular", size: 12))
                         .foregroundColor(.white.opacity(0.24))
                         .underline()
@@ -438,7 +518,7 @@ struct OnboardingViewV2: View {
             Spacer().frame(height: 12)
             ZStack(alignment: .leading) {
                 if userName.isEmpty {
-                    Text("your name")
+                    Text("Your name")
                         .font(.custom("HelveticaNeue", size: 21))
                         .foregroundColor(.white.opacity(0.20))
                 }
@@ -457,7 +537,7 @@ struct OnboardingViewV2: View {
                 alignment: .bottom
             )
             Spacer().frame(height: 28)
-            v2Button("continue") { submitName() }
+            v2Button("Continue") { submitName() }
                 .opacity(userName.trimmingCharacters(in: .whitespaces).isEmpty ? 0.28 : 1)
                 .disabled(userName.trimmingCharacters(in: .whitespaces).isEmpty || isTransitioning)
         }
@@ -477,7 +557,7 @@ struct OnboardingViewV2: View {
             Spacer().frame(height: 12)
             ZStack(alignment: .leading) {
                 if userAge.isEmpty {
-                    Text("your age")
+                    Text("Your age")
                         .font(.custom("HelveticaNeue", size: 21))
                         .foregroundColor(.white.opacity(0.20))
                 }
@@ -497,14 +577,14 @@ struct OnboardingViewV2: View {
                 alignment: .bottom
             )
             if ageTooLow {
-                Text("this app is for ages 13 and above.")
+                Text("This app is for ages 13 and above.")
                     .font(.custom("HelveticaNeue", size: 13))
                     .foregroundColor(Color(red: 1.0, green: 0.4, blue: 0.4).opacity(0.85))
                     .padding(.top, 10)
                     .transition(.opacity)
             }
             Spacer().frame(height: 28)
-            v2Button("continue") { submitAge() }
+            v2Button("Continue") { submitAge() }
                 .opacity(ageIsValid ? 1 : 0.28)
                 .disabled(!ageIsValid || isTransitioning || ageSubmitted)
         }
@@ -690,13 +770,14 @@ struct OnboardingViewV2: View {
                         }
                     }
                 }
-                Text("you can select multiple answers")
+                Text("You can select multiple answers")
                     .font(.custom("Poppins-Regular", size: 13))
                     .foregroundColor(Color(white: 0.35))
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 8)
                 if step6ContinueVisible {
                     Spacer().frame(height: 16)
-                    v2Button("continue") { handleStep6Continue() }
+                    v2Button("Continue") { handleStep6Continue() }
                         .disabled(multiSelections6.isEmpty)
                         .opacity(multiSelections6.isEmpty ? 0.28 : 1)
                         .transition(.opacity.animation(.easeIn(duration: 0.3)))
@@ -753,13 +834,14 @@ struct OnboardingViewV2: View {
                     }
                 }
             }
-            Text("you can select multiple answers")
+            Text("You can select multiple answers")
                 .font(.custom("Poppins-Regular", size: 13))
                 .foregroundColor(Color(white: 0.35))
+                .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.top, 8)
             if step7ContinueVisible {
                 Spacer().frame(height: 16)
-                v2Button("continue") { handleStep7Continue() }
+                v2Button("Continue") { handleStep7Continue() }
                     .disabled(multiSelections7.isEmpty)
                     .opacity(multiSelections7.isEmpty ? 0.28 : 1)
                     .transition(.opacity.animation(.easeIn(duration: 0.3)))
@@ -801,13 +883,14 @@ struct OnboardingViewV2: View {
                     }
                 }
             }
-            Text("you can select multiple answers")
+            Text("You can select multiple answers")
                 .font(.custom("Poppins-Regular", size: 13))
                 .foregroundColor(Color(white: 0.35))
+                .frame(maxWidth: .infinity, alignment: .center)
                 .padding(.top, 8)
             if step8ContinueVisible {
                 Spacer().frame(height: 16)
-                v2Button("continue") { handleStep8Continue() }
+                v2Button("Continue") { handleStep8Continue() }
                     .disabled(multiSelections8.isEmpty)
                     .opacity(multiSelections8.isEmpty ? 0.28 : 1)
                     .transition(.opacity.animation(.easeIn(duration: 0.3)))
@@ -840,7 +923,7 @@ struct OnboardingViewV2: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ZStack(alignment: .leading) {
                         if customAnswer.isEmpty {
-                            Text("tell me more...")
+                            Text("Tell me more...")
                                 .font(.custom("HelveticaNeue", size: 16))
                                 .foregroundColor(.white.opacity(0.20))
                         }
@@ -858,7 +941,7 @@ struct OnboardingViewV2: View {
                         alignment: .bottom
                     )
                     Spacer().frame(height: 20)
-                    v2Button("done") { submitStep10() }
+                    v2Button("Done") { submitStep10() }
                 }
                 .transition(.opacity.animation(.easeIn(duration: 0.25)))
             } else {
@@ -929,7 +1012,7 @@ struct OnboardingViewV2: View {
                 }
             if buildDone {
                 Spacer().frame(height: 16)
-                Text("trained for the way you think.")
+                Text("Trained for the way you think.")
                     .font(.custom("Poppins-Regular", size: 15))
                     .foregroundColor(.white.opacity(0.32))
                     .transition(.opacity)
@@ -947,46 +1030,51 @@ struct OnboardingViewV2: View {
 
     // MARK: Step 13 — pattern reveal (full-screen)
 
-    private var patternPercentage: String {
+    private var patternIsFraction: Bool { quizSelections[5] == 2 }
+
+    private var patternNumber: Int {
         let s0 = quizSelections[0]
         let s5 = quizSelections[5]
-        if s0 == 0 && multiSelections8.contains(0) { return "73%" }
-        if s0 == 0 && s5 == 1 { return "71%" }
-        if s0 == 0 && multiSelections8.contains(1) { return "68%" }
-        if s0 == 1 && s5 == 1 { return "67%" }
-        if s0 == 1 && multiSelections8.contains(0) { return "64%" }
-        if (quizSelections[4] == 2 || quizSelections[4] == 3) && s5 == 1 { return "64%" }
-        if s5 == 2 { return "1 in 3" }
-        if s5 == 3 { return "58%" }
-        if s0 == 2 { return "61%" }
-        if s0 == 3 { return "54%" }
-        return "67%"
+        if s0 == 0 && multiSelections8.contains(0)                              { return 73 }
+        if s0 == 0 && s5 == 1                                                    { return 71 }
+        if s0 == 0 && multiSelections8.contains(1)                               { return 68 }
+        if s0 == 1 && s5 == 1                                                    { return 67 }
+        if s0 == 1 && multiSelections8.contains(0)                               { return 64 }
+        if (quizSelections[4] == 2 || quizSelections[4] == 3) && s5 == 1        { return 64 }
+        if s5 == 3                                                                { return 58 }
+        if s0 == 2                                                                { return 61 }
+        if s0 == 3                                                                { return 54 }
+        return 67
     }
 
     private var patternSourceLine: String {
-        "drawn from people who answered exactly like you.\nthe percentage is drawn from your answer pattern."
+        "Drawn from people who answered exactly like you.\nThe percentage is drawn from your answer pattern."
     }
 
     private var patternRevealFallbackText: String {
         switch quizSelections[0] {
         case 0:
-            return "of people who overthink constantly\nalready know what they should do.\n\nyou carry decisions with you constantly.\nyou've been sitting with this longer than you should.\nyou already know the answer — you just can't trust it yet.\n\nthat's not weakness.\nthat's the most common reason people stay stuck."
+            return "Most people who overthink constantly already know what they should do. You carry decisions with you constantly. You've been sitting with this longer than you should. You already know the answer — you just can't trust it yet. That's not weakness. That's the most common reason people stay stuck."
         case 1:
-            return "of people who face this often\nshare your exact pattern.\n\nyou overthink more than most.\nyou've been going back and forth longer than feels right.\npart of what's keeping you stuck isn't the decision — it's the noise around it.\n\nthat's not overthinking.\nthat's caring about getting it right."
+            return "Most people who face this often share your exact pattern. You overthink more than most. You've been going back and forth longer than feels right. Part of what's keeping you stuck isn't the decision — it's the noise around it. That's not overthinking. That's caring about getting it right."
         case 2:
-            return "of people who face this occasionally\nfeel it this heavily when they do.\n\nyou don't overthink everything.\njust the ones that matter.\nand when they matter — they really matter.\n\nthat's why the small decisions feel easy\nand the real ones feel impossible."
+            return "Most people who face this occasionally feel it this heavily when they do. You don't overthink everything — just the ones that matter. And when they matter, they really matter. That's why the small decisions feel easy and the real ones feel impossible."
         case 3:
-            return "of people who rarely face this\nfeel the weight of it this much when they do.\n\nyou don't do this often.\nbut when you do — it's real.\nthe rarest decisions carry the most weight.\n\nthat's not indecision.\nthat's knowing what actually matters."
+            return "Most people who rarely face this feel the weight of it this much when they do. You don't do this often — but when you do, it's real. The rarest decisions carry the most weight. That's not indecision. That's knowing what actually matters."
         default:
-            return "of people who face this often\nshare your exact pattern.\n\nyou overthink more than most.\nyou've been going back and forth longer than feels right.\npart of what's keeping you stuck isn't the decision — it's the noise around it.\n\nthat's not overthinking.\nthat's caring about getting it right."
+            return "Most people who face this often share your exact pattern. You overthink more than most. You've been going back and forth longer than feels right. Part of what's keeping you stuck isn't the decision — it's the noise around it. That's not overthinking. That's caring about getting it right."
         }
     }
 
-    private var displayLines: [String] {
+    private var displayText: String {
         let raw = patternRevealLoaded && !patternRevealContent.isEmpty
             ? patternRevealContent
             : patternRevealFallbackText
-        return raw.components(separatedBy: "\n").filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        return raw
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
     }
 
     private func quizAnswerText(for selection: Int?, step: Int) -> String {
@@ -1013,17 +1101,13 @@ struct OnboardingViewV2: View {
         patternContentAnimating = true
         loadingPulse = false
 
-        let lines = displayLines
-        for i in 0..<lines.count {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.4) {
-                withAnimation(.easeIn(duration: 0.3)) { patternDescriptionPhase = i + 1 }
-            }
-        }
-        let afterLines = Double(lines.count) * 0.4 + 1.0
-        DispatchQueue.main.asyncAfter(deadline: .now() + afterLines) {
+        withAnimation(.easeIn(duration: 0.5)) { patternDescriptionPhase = 1 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+            guard patternRevealPhase < 4 else { return }
             withAnimation(.easeIn(duration: 0.4)) { patternRevealPhase = 4 }
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + afterLines + 0.4 + 1.2) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
+            guard patternRevealPhase < 5 else { return }
             withAnimation(.easeIn(duration: 0.4)) { patternRevealPhase = 5 }
         }
     }
@@ -1031,19 +1115,35 @@ struct OnboardingViewV2: View {
     private var patternRevealView: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 0) {
                 Spacer()
 
-                Text(patternPercentage)
-                    .font(.custom("HelveticaNeue-UltraLight", size: 108))
-                    .foregroundColor(.white)
-                    .tracking(4)
-                    .multilineTextAlignment(.center)
-                    .opacity(patternRevealPhase >= 1 ? 1 : 0)
-                    .animation(.easeIn(duration: 0.5), value: patternRevealPhase >= 1)
+                Group {
+                    if patternIsFraction {
+                        Text("You're ")
+                            + Text("1 of 3").foregroundColor(Color(red: 0.18, green: 0.78, blue: 0.72))
+                            + Text(" thinking types.")
+                    } else {
+                        Text("You think like ")
+                            + Text("\(patternNumber)").foregroundColor(Color(red: 0.18, green: 0.78, blue: 0.72))
+                            + Text(" out of 100 people.")
+                    }
+                }
+                .font(.custom("HelveticaNeue-UltraLight", size: 28))
+                .lineSpacing(5)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .opacity(patternRevealPhase >= 1 ? 1 : 0)
+                .animation(.easeIn(duration: 0.5), value: patternRevealPhase >= 1)
+                .padding(.horizontal, 36)
 
                 if patternRevealPhase >= 3 {
-                    VStack(spacing: 14) {
+                    VStack(alignment: .leading, spacing: 14) {
+                        Text("Here's what that means for you:")
+                            .font(.custom("HelveticaNeue-Light", size: 14))
+                            .foregroundColor(.white.opacity(0.40))
+                            .opacity(patternDescriptionPhase >= 1 ? 1 : 0)
+                            .animation(.easeIn(duration: 0.5), value: patternDescriptionPhase)
+
                         if !patternRevealLoaded && !patternRevealFailed {
                             HStack(spacing: 8) {
                                 ForEach(0..<3, id: \.self) { i in
@@ -1060,28 +1160,19 @@ struct OnboardingViewV2: View {
                             }
                             .onAppear { loadingPulse = true }
                         } else {
-                            ForEach(Array(displayLines.enumerated()), id: \.offset) { i, line in
-                                Text(line)
-                                    .font(.custom("HelveticaNeue-Light", size: 16))
-                                    .foregroundColor(.white.opacity(0.75))
-                                    .multilineTextAlignment(.center)
-                                    .lineSpacing(4)
-                                    .opacity(patternDescriptionPhase > i ? 1 : 0)
-                                    .animation(.easeIn(duration: 0.3), value: patternDescriptionPhase)
-                            }
+                            Text(displayText)
+                                .font(.custom("HelveticaNeue-Light", size: 16))
+                                .foregroundColor(.white.opacity(0.75))
+                                .multilineTextAlignment(.leading)
+                                .lineSpacing(5)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .opacity(patternDescriptionPhase >= 1 ? 1 : 0)
+                                .animation(.easeIn(duration: 0.5), value: patternDescriptionPhase)
                         }
                     }
-                    .padding(.horizontal, 40)
-                    .padding(.top, 28)
+                    .padding(.horizontal, 36)
+                    .padding(.top, 32)
                 }
-
-                Text("you're one of them.")
-                    .font(.custom("HelveticaNeue-Light", size: 17))
-                    .foregroundColor(.white.opacity(0.7))
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 22)
-                    .opacity(patternRevealPhase >= 4 ? 1 : 0)
-                    .animation(.easeIn(duration: 0.4), value: patternRevealPhase >= 4)
 
                 Spacer()
 
@@ -1089,7 +1180,7 @@ struct OnboardingViewV2: View {
                     withAnimation(.easeOut(duration: 0.3)) { patternRevealPhase = 0 }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { advanceNoHistory() }
                 } label: {
-                    Text("continue")
+                    Text("Continue")
                         .font(.custom("HelveticaNeue", size: 17))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
@@ -1108,10 +1199,33 @@ struct OnboardingViewV2: View {
                     .foregroundColor(.white.opacity(0.20))
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
+                    .padding(.horizontal, 36)
                     .padding(.top, 12)
                     .padding(.bottom, 40)
                     .opacity(patternRevealPhase >= 2 ? 1 : 0)
                     .animation(.easeIn(duration: 0.4), value: patternRevealPhase >= 2)
+            }
+
+            VStack {
+                Text("Tap to skip animation")
+                    .font(.custom("HelveticaNeue", size: 11))
+                    .foregroundColor(.white.opacity(0.25))
+                    .padding(.top, 70)
+                    .opacity(patternRevealPhase < 5 ? 1 : 0)
+                    .animation(.easeOut(duration: 0.25), value: patternRevealPhase >= 5)
+                Spacer()
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard patternRevealPhase < 5 else { return }
+            if patternRevealLoaded || patternRevealFailed {
+                patternContentAnimating = true
+                loadingPulse = false
+                patternDescriptionPhase = 1
+                withAnimation(.easeIn(duration: 0.3)) { patternRevealPhase = 5 }
+            } else {
+                withAnimation(.easeIn(duration: 0.3)) { patternRevealPhase = 3 }
             }
         }
         .onAppear {
@@ -1124,12 +1238,15 @@ struct OnboardingViewV2: View {
             loadingPulse = false
 
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+                guard patternRevealPhase < 1 else { return }
                 withAnimation(.easeIn(duration: 0.5)) { patternRevealPhase = 1 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                guard patternRevealPhase < 2 else { return }
                 withAnimation(.easeIn(duration: 0.4)) { patternRevealPhase = 2 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
+                guard patternRevealPhase < 3 else { return }
                 patternRevealPhase = 3
                 triggerContentDisplayIfReady()
             }
@@ -1170,57 +1287,88 @@ struct OnboardingViewV2: View {
             VStack(alignment: .leading, spacing: 0) {
                 Spacer()
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("how we help.")
-                        .font(.custom("HelveticaNeue", size: 13))
-                        .foregroundColor(Color(white: 0.30))
-                        .padding(.bottom, 20)
+                    Text("How we help.")
+                        .font(.custom("HelveticaNeue", size: 32))
+                        .foregroundColor(.white)
+                        .padding(.bottom, 32)
                         .opacity(howWeHelpPhase >= 1 ? 1 : 0)
                     // TODO: Replace "we" in block 02 title with final app name once decided
-                    howBlock("01", "bring it something real.", "a decision. a feeling.\nsomething stuck in your head.")
+                    howBlock("01", "Bring it something real.", "A decision. A feeling.\nSomething stuck in your head.")
                         .opacity(howWeHelpPhase >= 1 ? 1 : 0)
                     Rectangle().fill(Color(white: 0.07)).frame(height: 1)
                         .opacity(howWeHelpPhase >= 2 ? 1 : 0)
-                    howBlock("02", "we run it forward.", "outcomes. tradeoffs. consequences.\nquietly. in seconds.")
+                    howBlock("02", "We run it forward.", "Outcomes. Tradeoffs. Consequences.\nQuietly. In seconds.")
                         .opacity(howWeHelpPhase >= 2 ? 1 : 0)
                     Rectangle().fill(Color(white: 0.07)).frame(height: 1)
                         .opacity(howWeHelpPhase >= 3 ? 1 : 0)
-                    howBlock("03", "you see farther.", "what keeps showing up.\nwhat emotion was hiding.")
+                    howBlock("03", "You see farther.", "What keeps showing up.\nWhat emotion was hiding.")
                         .opacity(howWeHelpPhase >= 3 ? 1 : 0)
                 }
                 .padding(.horizontal, 36)
                 Spacer()
-                v2Button("continue") { advanceNoHistory() }
+                v2Button("Continue") { advanceNoHistory() }
                     .padding(.horizontal, 32)
                     .padding(.bottom, 52)
                     .opacity(howWeHelpPhase >= 4 ? 1 : 0)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack {
+                Text("Tap to skip animation")
+                    .font(.custom("HelveticaNeue", size: 11))
+                    .foregroundColor(.white.opacity(0.25))
+                    .padding(.top, 70)
+                    .opacity(howWeHelpPhase < 4 ? 1 : 0)
+                    .animation(.easeOut(duration: 0.25), value: howWeHelpPhase >= 4)
+                Spacer()
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard howWeHelpPhase < 4 else { return }
+            withAnimation(.easeIn(duration: 0.3)) { howWeHelpPhase = 4 }
         }
         .onAppear {
             howWeHelpPhase = 0
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                guard howWeHelpPhase < 1 else { return }
                 withAnimation(.easeIn(duration: 0.5)) { howWeHelpPhase = 1 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                guard howWeHelpPhase < 2 else { return }
                 withAnimation(.easeIn(duration: 0.5)) { howWeHelpPhase = 2 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                guard howWeHelpPhase < 3 else { return }
                 withAnimation(.easeIn(duration: 0.5)) { howWeHelpPhase = 3 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.7) {
+                guard howWeHelpPhase < 4 else { return }
                 withAnimation(.easeIn(duration: 0.5)) { howWeHelpPhase = 4 }
             }
         }
     }
 
     private func howBlock(_ n: String, _ title: String, _ body: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(n).font(.custom("Poppins-Regular", size: 10)).foregroundColor(Color(white: 0.26))
-            Text(title).font(.custom("HelveticaNeue", size: 18)).foregroundColor(.white)
-            Text(body).font(.custom("Poppins-Regular", size: 13)).foregroundColor(.white.opacity(0.36)).lineSpacing(4)
+        HStack(alignment: .top, spacing: 20) {
+            Text(n)
+                .font(.custom("HelveticaNeue", size: 48))
+                .foregroundColor(Color(white: 0.40))
+                .frame(width: 64, alignment: .leading)
+                .lineLimit(1)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title)
+                    .font(.custom("HelveticaNeue", size: 22))
+                    .foregroundColor(.white)
+                    .padding(.top, 6)
+                Text(body)
+                    .font(.custom("HelveticaNeue", size: 14))
+                    .foregroundColor(.white.opacity(0.36))
+                    .lineSpacing(4)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 18)
+        .padding(.vertical, 20)
     }
 
     // MARK: Step 20 — nudge / notifications
@@ -1311,7 +1459,7 @@ struct OnboardingViewV2: View {
     private var step15: some View {
         VStack(alignment: .leading, spacing: 0) {
             Spacer().frame(height: 12)
-            Text("personalised to the way you think.")
+            Text("Personalised to the way you think.")
                 .font(.custom("Poppins-Regular", size: 15))
                 .foregroundColor(.white.opacity(0.30))
         }
@@ -1327,12 +1475,12 @@ struct OnboardingViewV2: View {
             Color.black.ignoresSafeArea()
             VStack(alignment: .leading, spacing: 0) {
                 Spacer()
-                Text("you're ready.")
+                Text("You're ready.")
                     .font(.custom("HelveticaNeue", size: 32))
                     .foregroundColor(.white)
                     .opacity(youreReadyPhase >= 1 ? 1 : 0)
                 Spacer().frame(height: 14)
-                Text("bring it something real.")
+                Text("Bring it something real.")
                     .font(.custom("Poppins-Regular", size: 17))
                     .foregroundColor(.white.opacity(0.38))
                     .opacity(youreReadyPhase >= 2 ? 1 : 0)
@@ -1365,40 +1513,38 @@ struct OnboardingViewV2: View {
             Color.black.ignoresSafeArea()
             VStack(spacing: 0) {
                 Spacer()
-                VStack(spacing: 24) {
-                    Text("you've already seen\nwhat hesitation costs.")
-                        .font(.custom("HelveticaNeue", size: 22))
+                VStack(spacing: 28) {
+                    (Text("Those ")
+                        .font(.custom("HelveticaNeue", size: 28))
                         .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(6)
-                        .opacity(featuresPhase >= 1 ? 1 : 0)
-                    (Text("those ")
-                        .font(.custom("HelveticaNeue", size: 22))
                     + Text(personYearsNumber)
-                        .font(.custom("HelveticaNeue-Bold", size: 22))
-                    + Text(" years\ndon't have to go that way.")
-                        .font(.custom("HelveticaNeue", size: 22)))
-                    .foregroundColor(.white)
+                        .font(.custom("HelveticaNeue-Bold", size: 28))
+                        .foregroundColor(.white)
+                    + Text(" years are still\nyours to take back.")
+                        .font(.custom("HelveticaNeue", size: 28))
+                        .foregroundColor(.white))
                     .multilineTextAlignment(.center)
                     .lineSpacing(6)
-                    .opacity(featuresPhase >= 2 ? 1 : 0)
-                    Text("less time stuck.\nmore moments acted on.\nmore life actually lived.")
-                        .font(.custom("HelveticaNeue", size: 22))
-                        .foregroundColor(.white)
+                    .opacity(featuresPhase >= 1 ? 1 : 0)
+
+                    Text("But only if you stop\nletting hesitation decide.")
+                        .font(.custom("HelveticaNeue", size: 28))
+                        .foregroundColor(Color(white: 0.38))
                         .multilineTextAlignment(.center)
                         .lineSpacing(6)
+                        .opacity(featuresPhase >= 2 ? 1 : 0)
+
+                    Text("[ Bracket ] can help you\nget back those years.")
+                        .font(.custom("HelveticaNeue", size: 15))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(5)
                         .opacity(featuresPhase >= 3 ? 1 : 0)
-                    Text("so hesitation stops\ndeciding for you.")
-                        .font(.custom("HelveticaNeue", size: 22))
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                        .lineSpacing(6)
-                        .opacity(featuresPhase >= 4 ? 1 : 0)
                 }
                 .padding(.horizontal, 36)
                 Spacer()
                 Button { advanceNoHistory() } label: {
-                    Text("see your options")
+                    Text("See your options")
                         .font(.custom("HelveticaNeue", size: 17))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
@@ -1409,7 +1555,7 @@ struct OnboardingViewV2: View {
                 .buttonStyle(PlainButtonStyle())
                 .padding(.horizontal, 32)
                 .padding(.bottom, 52)
-                .opacity(featuresPhase >= 5 ? 1 : 0)
+                .opacity(featuresPhase >= 4 ? 1 : 0)
             }
         }
         .onAppear {
@@ -1417,17 +1563,14 @@ struct OnboardingViewV2: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 withAnimation(.easeIn(duration: 0.6)) { featuresPhase = 1 }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
                 withAnimation(.easeIn(duration: 0.6)) { featuresPhase = 2 }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.7) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.1) {
                 withAnimation(.easeIn(duration: 0.6)) { featuresPhase = 3 }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.3) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                 withAnimation(.easeIn(duration: 0.6)) { featuresPhase = 4 }
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 3.3) {
-                withAnimation(.easeIn(duration: 0.6)) { featuresPhase = 5 }
             }
         }
     }
@@ -1435,42 +1578,51 @@ struct OnboardingViewV2: View {
     // MARK: Step 19 — paywall
 
     private var paywallView: some View {
-        let blue = Color(red: 0.22, green: 0.36, blue: 1.0)
-        let paywallVideoURL = Bundle.main.url(forResource: "paywall_bg", withExtension: "mov")
         return ZStack {
-            if let url = paywallVideoURL {
-                LoopingVideoView(url: url)
-                    .ignoresSafeArea()
-                    .scaleEffect(1.05)
-                Color.black.opacity(0.72).ignoresSafeArea()
-            } else {
-                Color.black.ignoresSafeArea()
-            }
+            // Background image — fully independent layer, never moves
+            Image("onboarding_paywall_bg")
+                .resizable()
+                .scaledToFill()
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .offset(y: -60)
+                .clipped()
+                .ignoresSafeArea()
+
+            Color.black.opacity(0.35).ignoresSafeArea()
+
+            // Content layer — fully independent from image
+            ZStack(alignment: .topLeading) {
+                Color.clear
+
+            // TOP SECTION — fixed at top
             VStack(alignment: .leading, spacing: 0) {
-                Text("your next decision\nchanges everything.")
+                Text("Your next decision\nchanges everything.")
                     .font(.custom("HelveticaNeue-Bold", size: 26))
                     .foregroundColor(.white)
                     .lineSpacing(4)
                     .padding(.top, 16)
 
-                Text("spend less time stuck between\n\"what if\" and \"what now.\"")
+                Text("Spend less time stuck between\n\"what if\" and \"what now.\"")
                     .font(.custom("Poppins-Regular", size: 14))
                     .foregroundColor(Color(white: 0.45))
                     .lineSpacing(4)
                     .padding(.top, 10)
 
                 VStack(alignment: .leading, spacing: 0) {
-                    pwTimelineRow("checkmark", true,  "the thought",
-                                  "bring the thing you can't stop thinking about.", false)
-                    pwTimelineRow("lightbulb.fill", false, "the verdict",
-                                  "thousands of simulations. one clear answer.", false)
-                    pwTimelineRow("star.fill", false, "the outcome",
-                                  "you start moving with clarity.", true)
+                    pwTimelineRow("checkmark", true,  "The thought",
+                                  "Bring the thing you can't stop thinking about.", false)
+                    pwTimelineRow("lightbulb.fill", false, "The verdict",
+                                  "Thousands of simulations. One clear answer.", false)
+                    pwTimelineRow("star.fill", false, "The outcome",
+                                  "You start moving with clarity.", true)
                 }
                 .padding(.top, 16)
+            }
+            .padding(.horizontal, 28)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer()
-
+            // BOTTOM SECTION — fixed at bottom (button never moves)
+            VStack(alignment: .leading, spacing: 0) {
                 if selectedPlan == 0 {
                     VStack(spacing: 4) {
                         Text("7 Days for $0.00")
@@ -1511,7 +1663,10 @@ struct OnboardingViewV2: View {
                         }) {
                             let success = await viewModel.purchase(package: package)
                             if success {
-                                advanceNoHistory()
+                                await MainActor.run {
+                                    onboardingConfirmationTier = viewModel.purchasedTier
+                                    showOnboardingConfirmation = true
+                                }
                             }
                         } else {
                             await MainActor.run {
@@ -1521,40 +1676,43 @@ struct OnboardingViewV2: View {
                         }
                     }
                 } label: {
-                    Text(selectedPlan == 0 ? "start my 7-day free trial" : "get Core")
+                    Text(selectedPlan == 0 ? "Start my 7-day free trial" : "Get Core")
                         .font(.custom("HelveticaNeue-Bold", size: 17))
-                        .foregroundColor(.white)
+                        .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 17)
-                        .background(blue)
+                        .background(Color.white)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black, lineWidth: 1.5))
                 }
                 .buttonStyle(PlainButtonStyle())
                 .padding(.top, 12)
 
-                if selectedPlan == 0 {
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(Color(white: 0.36))
-                        Text("7 days free. cancel anytime.")
-                            .font(.custom("Poppins-Regular", size: 12))
-                            .foregroundColor(Color(white: 0.36))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(Color(white: 0.36))
+                    Text(selectedPlan == 0 ? "7 days free. Cancel anytime." : "One-time payment. 300 thinks.")
+                        .font(.custom("Poppins-Regular", size: 12))
+                        .foregroundColor(Color(white: 0.36))
                 }
+                .frame(maxWidth: .infinity)
+                .padding(.top, 8)
 
                 HStack(spacing: 18) {
                     Button {
-                        if let u = URL(string: "https://creative-sailfish-dc6.notion.site/Terms-and-conditions-3647cd351f5b8000b482d1062d00f0ad") { UIApplication.shared.open(u) }
+                        docsTab = 0
+                        showDocs = true
                     } label: { Text("Terms & Privacy").font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.28)) }
                     .buttonStyle(PlainButtonStyle())
                     Button {
                         Task {
                             let restored = await viewModel.restorePurchases()
                             if restored {
-                                advanceNoHistory()
+                                await MainActor.run {
+                                    onboardingConfirmationTier = viewModel.purchasedTier
+                                    showOnboardingConfirmation = true
+                                }
                             } else {
                                 await MainActor.run {
                                     purchaseErrorMessage = "No active subscription found for this Apple ID."
@@ -1576,10 +1734,10 @@ struct OnboardingViewV2: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 6)
-                .padding(.bottom, 40)
+                .padding(.bottom, 100)
             }
             .padding(.horizontal, 28)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         }
         .onAppear {
             PostHogSDK.shared.capture("paywall_viewed")
@@ -1591,12 +1749,27 @@ struct OnboardingViewV2: View {
                 if let core = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths" }) {
                     paywallCorePrice = core.storeProduct.localizedPriceString
                 }
+                #if DEBUG
+                switch UserDefaults.standard.string(forKey: "debug_currencyPreview") ?? "off" {
+                case "USD": paywallProPrice = "$99.99";      paywallCorePrice = "$59.99"
+                case "GBP": paywallProPrice = "£79.99";      paywallCorePrice = "£49.99"
+                case "SGD": paywallProPrice = "S$129.99";    paywallCorePrice = "S$79.99"
+                default: break
+                }
+                #endif
             }
+        }
         }
         .alert("Purchase Failed", isPresented: $showPurchaseError) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(purchaseErrorMessage)
+        }
+        .fullScreenCover(isPresented: $showOnboardingConfirmation) {
+            PaymentConfirmationView(tier: onboardingConfirmationTier) {
+                showOnboardingConfirmation = false
+                advanceNoHistory()
+            }
         }
     }
 
@@ -1682,7 +1855,7 @@ struct OnboardingViewV2: View {
     private var blackTransitionView: some View {
         ZStack {
             Color.black.ignoresSafeArea()
-            Text("some not so great news, and some great news.")
+            Text("Some not so great news, and some great news.")
                 .font(.custom("Poppins-Regular", size: 19))
                 .foregroundColor(.white)
                 .multilineTextAlignment(.center)
@@ -1711,7 +1884,7 @@ struct OnboardingViewV2: View {
                 Spacer()
                 VStack(alignment: .leading, spacing: 20) {
 
-                    (Text("the bad news is that you'll lose ")
+                    (Text("The bad news is that you'll lose ")
                         .font(.custom("HelveticaNeue-Light", size: 17))
                         .foregroundColor(.white.opacity(0.7))
                     + Text(displayedMomentsNumber)
@@ -1739,7 +1912,7 @@ struct OnboardingViewV2: View {
                     .frame(height: 28)
                     .opacity(badNewsPhase >= 2 ? 1 : 0)
 
-                    Text("meaning that you'll spend")
+                    Text("Meaning that you'll spend")
                         .font(.custom("HelveticaNeue-Light", size: 17))
                         .foregroundColor(.white.opacity(0.7))
                         .opacity(badNewsPhase >= 3 ? 1 : 0)
@@ -1750,13 +1923,13 @@ struct OnboardingViewV2: View {
                         .tracking(2)
                         .opacity(badNewsPhase >= 4 ? 1 : 0)
 
-                    Text("of your life hesitating. overthinking.\nyep — just for deciding.")
+                    Text("Of your life hesitating. Overthinking.\nYep — just for deciding.")
                         .font(.custom("HelveticaNeue", size: 17))
                         .foregroundColor(.white.opacity(0.7))
                         .lineSpacing(5)
                         .opacity(badNewsPhase >= 5 ? 1 : 0)
 
-                    Text("most of it during the years\nyou were supposed to be living the most.")
+                    Text("Most of it during the years\nyou were supposed to be living the most.")
                         .font(.custom("HelveticaNeue", size: 15))
                         .foregroundColor(.white.opacity(0.5))
                         .lineSpacing(5)
@@ -1765,7 +1938,7 @@ struct OnboardingViewV2: View {
                 }
                 .padding(.horizontal, 36)
                 Spacer()
-                Text("calculated from your answers and average deliberation research.")
+                Text("Calculated from your answers and average deliberation research.")
                     .font(.custom("HelveticaNeue", size: 12))
                     .foregroundColor(.white.opacity(0.3))
                     .multilineTextAlignment(.center)
@@ -1778,7 +1951,7 @@ struct OnboardingViewV2: View {
                     withAnimation(.easeInOut(duration: 0.4)) { badNewsPhase = 0 }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { advanceNoHistory() }
                 } label: {
-                    Text("continue")
+                    Text("Continue")
                         .font(.custom("HelveticaNeue", size: 17))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
@@ -1792,33 +1965,60 @@ struct OnboardingViewV2: View {
                 .opacity(badNewsPhase >= 7 ? 1 : 0)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack {
+                Text("Tap to skip animation")
+                    .font(.custom("HelveticaNeue", size: 11))
+                    .foregroundColor(.white.opacity(0.25))
+                    .padding(.top, 70)
+                    .opacity(badNewsPhase < 7 ? 1 : 0)
+                    .animation(.easeOut(duration: 0.25), value: badNewsPhase >= 7)
+                Spacer()
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard badNewsPhase < 7 else { return }
+            displayedMomentsNumber = personMomentsLabel
+            if !badNewsQuoteCycling {
+                badNewsQuoteCycling = true
+                startQuoteCycle()
+            }
+            withAnimation(.easeIn(duration: 0.3)) { badNewsPhase = 7 }
         }
         .onAppear {
             badNewsPhase = 0
             badNewsQuotePhrase = 0
             displayedMomentsNumber = "000,000"
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                guard badNewsPhase < 1 else { return }
                 withAnimation(.easeIn(duration: 0.6)) { badNewsPhase = 1 }
                 animateMomentsNumber()
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                guard badNewsPhase < 2 else { return }
                 withAnimation(.easeIn(duration: 0.5)) { badNewsPhase = 2 }
                 badNewsQuoteCycling = true
                 startQuoteCycle()
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 4.3) {
+                guard badNewsPhase < 3 else { return }
                 withAnimation(.easeIn(duration: 0.6)) { badNewsPhase = 3 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 4.7) {
+                guard badNewsPhase < 4 else { return }
                 withAnimation(.easeIn(duration: 0.8)) { badNewsPhase = 4 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 5.9) {
+                guard badNewsPhase < 5 else { return }
                 withAnimation(.easeIn(duration: 0.6)) { badNewsPhase = 5 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 6.7) {
+                guard badNewsPhase < 6 else { return }
                 withAnimation(.easeIn(duration: 0.6)) { badNewsPhase = 6 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 7.9) {
+                guard badNewsPhase < 7 else { return }
                 withAnimation(.easeIn(duration: 0.6)) { badNewsPhase = 7 }
             }
         }
@@ -1829,7 +2029,7 @@ struct OnboardingViewV2: View {
         let totalFrames = 22
         let finalValue = personMomentsLabel
         func tick() {
-            if frame >= totalFrames { displayedMomentsNumber = finalValue; return }
+            if frame >= totalFrames || badNewsPhase >= 7 { displayedMomentsNumber = finalValue; return }
             let r = Int.random(in: 100000...999999)
             displayedMomentsNumber = "\(r / 1000),\(String(format: "%03d", r % 1000))"
             frame += 1
@@ -1866,14 +2066,14 @@ struct OnboardingViewV2: View {
                 VStack(alignment: .leading, spacing: 0) {
                     Spacer()
                     VStack(alignment: .leading, spacing: 20) {
-                        Text("the good news is it doesn't have to stay that way.")
+                        Text("The good news is it doesn't have to stay that way.")
                             .font(.custom("HelveticaNeue-Light", size: 17))
                             .foregroundColor(.white.opacity(0.7))
                             .lineSpacing(5)
                             .fixedSize(horizontal: false, vertical: true)
                             .opacity(goodNewsPhase >= 1 ? 1 : 0)
                         // TODO: Replace "we" with final app name once decided
-                        Text("we will help you spend less time stuck between decisions and more time moving toward:")
+                        Text("We will help you spend less time stuck between decisions and more time moving toward:")
                             .font(.custom("HelveticaNeue", size: 17))
                             .foregroundColor(.white.opacity(0.6))
                             .lineSpacing(5)
@@ -1893,7 +2093,7 @@ struct OnboardingViewV2: View {
                         }
                         .frame(height: 46)
                         .opacity(goodNewsPhase >= 3 ? 1 : 0)
-                        Text("so more of your life\ngets spent living. not hesitating.")
+                        Text("So more of your life\ngets spent living. Not hesitating.")
                             .font(.custom("HelveticaNeue", size: 17))
                             .foregroundColor(.white.opacity(0.7))
                             .lineSpacing(5)
@@ -1906,7 +2106,7 @@ struct OnboardingViewV2: View {
                         withAnimation(.easeInOut(duration: 0.4)) { goodNewsPhase = 0 }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { advanceNoHistory() }
                     } label: {
-                        Text("unlock your brain")
+                        Text("Unlock your brain")
                             .font(.custom("HelveticaNeue", size: 17))
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
@@ -1926,14 +2126,14 @@ struct OnboardingViewV2: View {
                 VStack(spacing: 0) {
                     Spacer()
                     VStack(spacing: 24) {
-                        Text("the good news is it doesn't have to stay that way.")
+                        Text("The good news is it doesn't have to stay that way.")
                             .font(.custom("HelveticaNeue-Light", size: 17))
                             .foregroundColor(.white.opacity(0.7))
                             .multilineTextAlignment(.center)
                             .lineSpacing(5)
                             .opacity(goodNewsPhase >= 1 ? 1 : 0)
                         // TODO: Replace "we" with final app name once decided
-                        Text("we will help you spend less time stuck\nbetween decisions and more time moving toward:")
+                        Text("We will help you spend less time stuck\nbetween decisions and more time moving toward:")
                             .font(.custom("HelveticaNeue", size: 17))
                             .foregroundColor(.white.opacity(0.6))
                             .multilineTextAlignment(.center)
@@ -1952,7 +2152,7 @@ struct OnboardingViewV2: View {
                         }
                         .frame(height: 46)
                         .opacity(goodNewsPhase >= 3 ? 1 : 0)
-                        Text("so more of your life\ngets spent living. not hesitating.")
+                        Text("So more of your life\ngets spent living. Not hesitating.")
                             .font(.custom("HelveticaNeue", size: 17))
                             .foregroundColor(.white.opacity(0.7))
                             .multilineTextAlignment(.center)
@@ -1966,7 +2166,7 @@ struct OnboardingViewV2: View {
                         withAnimation(.easeInOut(duration: 0.4)) { goodNewsPhase = 0 }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { advanceNoHistory() }
                     } label: {
-                        Text("unlock your brain")
+                        Text("Unlock your brain")
                             .font(.custom("HelveticaNeue", size: 17))
                             .foregroundColor(.black)
                             .frame(maxWidth: .infinity)
@@ -1980,26 +2180,50 @@ struct OnboardingViewV2: View {
                     .opacity(goodNewsPhase >= 5 ? 1 : 0)
                 }
             }
+
+            VStack {
+                Text("Tap to skip animation")
+                    .font(.custom("HelveticaNeue", size: 11))
+                    .foregroundColor(.white.opacity(0.25))
+                    .padding(.top, 70)
+                    .opacity(goodNewsPhase < 5 ? 1 : 0)
+                    .animation(.easeOut(duration: 0.25), value: goodNewsPhase >= 5)
+                Spacer()
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard goodNewsPhase < 5 else { return }
+            if !goodNewsRolling {
+                goodNewsRolling = true
+                startGoodNewsRollingCycle()
+            }
+            withAnimation(.easeIn(duration: 0.3)) { goodNewsPhase = 5 }
         }
         .onAppear {
             goodNewsPhase = 0
             rollingPhrase = 0
             goodNewsRolling = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                guard goodNewsPhase < 1 else { return }
                 withAnimation(.easeIn(duration: 0.5)) { goodNewsPhase = 1 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                guard goodNewsPhase < 2 else { return }
                 withAnimation(.easeIn(duration: 0.5)) { goodNewsPhase = 2 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                guard goodNewsPhase < 3 else { return }
                 withAnimation(.easeIn(duration: 0.5)) { goodNewsPhase = 3 }
                 goodNewsRolling = true
                 startGoodNewsRollingCycle()
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.3) {
+                guard goodNewsPhase < 4 else { return }
                 withAnimation(.easeIn(duration: 0.5)) { goodNewsPhase = 4 }
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 3.6) {
+                guard goodNewsPhase < 5 else { return }
                 withAnimation(.easeIn(duration: 0.4)) { goodNewsPhase = 5 }
             }
         }
@@ -2009,67 +2233,305 @@ struct OnboardingViewV2: View {
 
     private var brandIntroView: some View {
         GeometryReader { geo in
-            Color.black.ignoresSafeArea()
-                .onAppear { startBrandIntroAnimation(screenHeight: geo.size.height) }
-        }
-    }
+            ZStack {
+                Color.black.ignoresSafeArea()
 
-    private func startBrandIntroAnimation(screenHeight: CGFloat) {
-        bracketWordOpacity = 1.0
-        letterOpacities = Array(repeating: 1.0, count: 7)
-
-        // Phase 0 — typewriter: type "Bracket" char by char (slow)
-        let word = Array("Bracket")
-        for (i, char) in word.enumerated() {
-            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.11) {
-                typedBracketWord.append(char)
+                if useNumericIntro {
+                    ForEach(numericParticles) { p in
+                        Text(p.hex)
+                            .font(.system(size: 10, weight: .regular, design: .monospaced))
+                            .foregroundColor(.white)
+                            .scaleEffect(p.currentScale)
+                            .position(p.position)
+                            .opacity(p.currentOpacity)
+                            .allowsHitTesting(false)
+                    }
+                }
             }
-        }
-        // last char at 6 × 0.11 = 0.66s
-
-        // Phase 1 — random per-letter blink flicker (starts 0.85s, 18 blinks)
-        for i in 0..<18 {
-            let delay = 0.85 + Double(i) * 0.07
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                let idx = Int.random(in: 0..<7)
-                withAnimation(.linear(duration: 0.03)) { letterOpacities[idx] = 0.05 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
-                    withAnimation(.linear(duration: 0.03)) { letterOpacities[idx] = 1.0 }
+            .onAppear {
+                if useNumericIntro {
+                    startNumericIntroAnimation(geo: geo)
+                } else {
+                    startBrandIntroAnimation(screenHeight: geo.size.height)
                 }
             }
         }
-        // flicker ends around 0.85 + 17×0.07 = 2.04s
+    }
 
-        // Phase 2 — brackets slide in close to the name (2.2s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
-            withAnimation(.easeInOut(duration: 0.4)) {
+
+    private func startBrandIntroAnimation(screenHeight: CGFloat) {
+        bracketWordOpacity = 1.0
+        letterOpacities = Array(repeating: 0.0, count: 7)
+
+        // Phase 0 — type "Bracket" char by char with a gentle fade-in per letter
+        let word = Array("Bracket")
+        for (i, char) in word.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * 0.09) {
+                typedBracketWord.append(char)
+                withAnimation(.easeOut(duration: 0.22)) {
+                    if i < letterOpacities.count { letterOpacities[i] = 1.0 }
+                }
+            }
+        }
+        // last char at 6 × 0.09 = 0.54s, fades complete by ~0.76s
+
+        // Phase 1 — one soft "breath" pulse on the whole word (1.0s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            withAnimation(.easeInOut(duration: 0.45)) { bracketWordOpacity = 0.55 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                withAnimation(.easeInOut(duration: 0.4)) { bracketWordOpacity = 1.0 }
+            }
+        }
+
+        // Phase 2 — brackets glide in with a damped spring, landing softly (1.85s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.85) {
+            withAnimation(.easeIn(duration: 0.18)) {
                 leftBracketOpacity = 1.0
-                leftBracketX = -44
                 rightBracketOpacity = 1.0
+            }
+            withAnimation(.spring(response: 0.7, dampingFraction: 0.72)) {
+                leftBracketX = -44
                 rightBracketX = 44
             }
         }
 
-        // Phase 3 — "Bracket" fades, brackets close to [ ] (3.3s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.3) {
-            withAnimation(.easeInOut(duration: 0.3)) {
+        // Phase 3 — text fades while brackets pinch inward together (2.85s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.85) {
+            withAnimation(.easeInOut(duration: 0.45)) {
                 bracketWordOpacity = 0
+            }
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.78)) {
                 leftBracketX = -14
                 rightBracketX = 14
             }
         }
 
-        // Phase 4 — shrinks slightly, settles just below safe area (3.9s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3.9) {
-            withAnimation(.easeInOut(duration: 0.5)) {
+        // Phase 4 — settle to top with a slow, organic spring (3.55s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.55) {
+            withAnimation(.spring(response: 0.85, dampingFraction: 0.82)) {
                 brandLogoScale = 0.72
                 brandLogoYOffset = -(screenHeight * 0.47)
             }
         }
 
-        // Complete (4.4s)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 4.4) {
+        // Complete (4.3s)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.3) {
             showBrandIntro = false
+        }
+    }
+
+    // MARK: - Numeric "probability" intro (Version B)
+
+    private func startNumericIntroAnimation(geo: GeometryProxy) {
+        bracketWordOpacity = 0
+        leftBracketOpacity = 0
+        rightBracketOpacity = 0
+        brandLogoScale = 1.0
+        brandLogoYOffset = 0
+        typedBracketWord = ""
+        letterOpacities = Array(repeating: 1.0, count: 7)
+        leftBracketX = -14
+        rightBracketX = 14
+
+        let w = geo.size.width
+        let h = geo.size.height
+        let centerX = w / 2
+
+        let hexBank = ["00", "01", "29", "3B", "5E", "67", "7F", "8F",
+                       "A3", "C3", "ED", "FD", "FF", "61", "76", "04",
+                       "45", "B2", "D4", "1A", "9C", "2E", "8B", "F1"]
+
+        // ── Uniform grid covering the whole screen ───────────────────────────
+        let cellW: CGFloat = 24
+        let cellH: CGFloat = 20
+        let cols = max(12, Int(w / cellW))
+        let rows = max(28, Int(h / cellH))
+        let gridW = CGFloat(cols) * cellW
+        let gridH = CGFloat(rows) * cellH
+        let gridOriginX = (w - gridW) / 2 + cellW / 2
+        let gridOriginY = (h - gridH) / 2 + cellH / 2
+
+        // ── Bracket outline INSIDE the grid (in cell coordinates) ────────────
+        // Each bracket = 4 cols wide, 14 rows tall. 2-col gap between [ and ].
+        let bCols = 4
+        let bRows = 14
+        let bGap = 2
+        let totalBW = bCols + bGap + bCols
+        let leftStartCol = (cols - totalBW) / 2
+        let rightStartCol = leftStartCol + bCols + bGap
+        let topRow = (rows - bRows) / 2
+
+        struct GridPos: Hashable { let row: Int; let col: Int }
+        var bracketSet: Set<GridPos> = []
+
+        // [ shape: top bar, bottom bar, left vertical (2 cols thick)
+        for c in 0..<bCols { bracketSet.insert(GridPos(row: topRow, col: leftStartCol + c)) }
+        for c in 0..<bCols { bracketSet.insert(GridPos(row: topRow + bRows - 1, col: leftStartCol + c)) }
+        for r in 1..<(bRows - 1) {
+            for c in 0..<2 { bracketSet.insert(GridPos(row: topRow + r, col: leftStartCol + c)) }
+        }
+        // ] shape: top bar, bottom bar, right vertical (2 cols thick on the right side)
+        for c in 0..<bCols { bracketSet.insert(GridPos(row: topRow, col: rightStartCol + c)) }
+        for c in 0..<bCols { bracketSet.insert(GridPos(row: topRow + bRows - 1, col: rightStartCol + c)) }
+        for r in 1..<(bRows - 1) {
+            for c in (bCols - 2)..<bCols { bracketSet.insert(GridPos(row: topRow + r, col: rightStartCol + c)) }
+        }
+
+        // Build a lookup of bracket cell screen positions
+        func cellPos(_ row: Int, _ col: Int) -> CGPoint {
+            CGPoint(
+                x: gridOriginX + CGFloat(col) * cellW,
+                y: gridOriginY + CGFloat(row) * cellH
+            )
+        }
+
+        // For each non-bracket cell, find the nearest bracket cell (Manhattan)
+        let bracketArray = Array(bracketSet)
+
+        // ── Build particles ─────────────────────────────────────────────────
+        var particles: [NumericIntroParticle] = []
+        for r in 0..<rows {
+            for c in 0..<cols {
+                let here = GridPos(row: r, col: c)
+                let isBracket = bracketSet.contains(here)
+                let myPos = cellPos(r, c)
+                let target: CGPoint
+                if isBracket {
+                    target = myPos
+                } else {
+                    var bestD = Int.max
+                    var bestPos = myPos
+                    for b in bracketArray {
+                        let d = abs(b.row - r) + abs(b.col - c)
+                        if d < bestD {
+                            bestD = d
+                            bestPos = cellPos(b.row, b.col)
+                        }
+                    }
+                    target = bestPos
+                }
+                particles.append(NumericIntroParticle(
+                    position: myPos,
+                    targetPosition: target,
+                    isBracketCell: isBracket,
+                    hex: hexBank.randomElement() ?? "00",
+                    currentOpacity: 0,
+                    currentScale: 1.0
+                ))
+            }
+        }
+        numericParticles = particles
+
+        // ── PHASE 0 (0–0.8s) — uniform grid fades in across whole screen ─────
+        for i in 0..<numericParticles.count {
+            let delay = 0.04 + Double.random(in: 0...0.7)
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                guard i < numericParticles.count else { return }
+                withAnimation(.easeIn(duration: 0.3)) {
+                    let p = numericParticles[i]
+                    numericParticles[i].currentOpacity = p.isBracketCell
+                        ? Double.random(in: 0.55...0.85)
+                        : Double.random(in: 0.35...0.7)
+                }
+            }
+        }
+
+        // ── PHASE 1 (1.2–4.0s) — STRICT L-PATH migration ────────────────────
+        // Each non-bracket cell moves horizontally first (to bracket's column),
+        // then vertically (to bracket's row). No diagonal motion ever.
+        // Inner-ring cells start first so the bracket appears to absorb its
+        // surroundings, then the wave propagates outward.
+        let secondsPerCell: Double = 0.05
+        for i in 0..<numericParticles.count {
+            let p = numericParticles[i]
+            if p.isBracketCell { continue }
+            let dx = p.targetPosition.x - p.position.x
+            let dy = p.targetPosition.y - p.position.y
+            let cellsH = abs(dx) / cellW
+            let cellsV = abs(dy) / cellH
+            let manhattan = Double(cellsH + cellsV)
+            let hDuration = max(0.08, Double(cellsH) * secondsPerCell)
+            let vDuration = max(0.08, Double(cellsV) * secondsPerCell)
+            // Closer rings start first, outer rings start later → "drain" feel
+            let delay = 1.2 + manhattan * 0.04
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                guard i < numericParticles.count else { return }
+                let p2 = numericParticles[i]
+                // Step 1 — horizontal slide only
+                withAnimation(.linear(duration: hDuration)) {
+                    numericParticles[i].position.x = p2.targetPosition.x
+                }
+                // Step 2 — vertical slide only, fading as we arrive
+                DispatchQueue.main.asyncAfter(deadline: .now() + hDuration) {
+                    guard i < numericParticles.count else { return }
+                    withAnimation(.linear(duration: vDuration)) {
+                        numericParticles[i].position.y = numericParticles[i].targetPosition.y
+                        numericParticles[i].currentOpacity = 0
+                    }
+                }
+            }
+        }
+
+        // ── PHASE 1b (3.6s) — bracket cells lock to full brightness ──────────
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.6) {
+            for i in 0..<numericParticles.count where numericParticles[i].isBracketCell {
+                withAnimation(.easeIn(duration: 0.45)) {
+                    numericParticles[i].currentOpacity = 0.95
+                }
+            }
+        }
+
+        // ── PHASE 2 (4.2s) — PULSE: bracket digits bloom to full white ───────
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.2) {
+            for i in 0..<numericParticles.count where numericParticles[i].isBracketCell {
+                withAnimation(.easeOut(duration: 0.22)) {
+                    numericParticles[i].currentOpacity = 1.0
+                    numericParticles[i].currentScale = 1.45
+                }
+            }
+        }
+
+        // ── PHASE 3 (4.55s) — crystallize: digits dissolve, solid BracketShape forms in place ──
+        // BracketShape natural size = 24×70 (1 : 2.92, same as digit bracket).
+        // At scale = bracketPixelH / 70 = 4 (for the standard grid), the shape
+        // renders at exactly bracketPixelW × bracketPixelH on screen.
+        let leftBracketCenterX = gridOriginX + (CGFloat(leftStartCol) + CGFloat(bCols - 1) / 2) * cellW
+        let rightBracketCenterX = gridOriginX + (CGFloat(rightStartCol) + CGFloat(bCols - 1) / 2) * cellW
+        let bracketPixelH = CGFloat(bRows) * cellH
+        let bracketShapeNaturalH: CGFloat = 70
+        let targetScale = bracketPixelH / bracketShapeNaturalH
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 4.55) {
+            brandLogoScale = targetScale
+            leftBracketX = (leftBracketCenterX - centerX) / targetScale
+            rightBracketX = (rightBracketCenterX - centerX) / targetScale
+            withAnimation(.easeIn(duration: 0.4)) {
+                leftBracketOpacity = 1.0
+                rightBracketOpacity = 1.0
+            }
+            for i in 0..<numericParticles.count where numericParticles[i].isBracketCell {
+                withAnimation(.easeOut(duration: 0.42)) {
+                    numericParticles[i].currentOpacity = 0
+                    numericParticles[i].currentScale = 1.0
+                }
+            }
+        }
+
+        // ── PHASE 4 (5.3s) — solid [ ] shrinks and rides to the top corner ───
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.3) {
+            withAnimation(.spring(response: 1.0, dampingFraction: 0.85)) {
+                brandLogoScale = 0.72
+                brandLogoYOffset = -(h * 0.47)
+                leftBracketX = -18
+                rightBracketX = 18
+            }
+        }
+
+        // ── DONE (6.4s) ──
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6.4) {
+            showBrandIntro = false
+            numericParticles = []
         }
     }
 
@@ -2274,12 +2736,12 @@ private struct V2MemoryEntryView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(entry.question.replacingOccurrences(of: "\n", with: " "))
-                .font(.custom("HelveticaNeue", size: 13))
+                .font(.custom("HelveticaNeue", size: 16))
                 .foregroundColor(.white.opacity(questionOpacity))
                 .lineLimit(2)
             if !entry.answer.isEmpty {
                 Text(entry.answer)
-                    .font(.custom("Poppins-Regular", size: 14))
+                    .font(.custom("Poppins-Regular", size: 17))
                     .foregroundColor(teal.opacity(answerOpacity))
                     .lineLimit(1)
             }

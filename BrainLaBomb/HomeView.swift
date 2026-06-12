@@ -93,30 +93,6 @@ struct HomeView: View {
                             .frame(width: 44, height: 44)
                     }
 
-                    #if DEBUG
-                    if !viewModel.hideDebugUI {
-                        Button {
-                            switch viewModel.debugTier {
-                            case .core: viewModel.debugTier = .pro
-                            case .pro:  viewModel.debugTier = .core
-                            }
-                        } label: {
-                            Text(tierLabel)
-                                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                .foregroundColor(tierColor)
-                                .padding(.horizontal, 10).padding(.vertical, 5)
-                                .background(Color(white: 0.12).clipShape(Capsule()))
-                        }
-
-                        Button { viewModel.thinksUsed = 0 } label: {
-                            Text("RST")
-                                .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                .foregroundColor(Color(white: 0.35))
-                                .padding(.horizontal, 10).padding(.vertical, 5)
-                                .background(Color(white: 0.12).clipShape(Capsule()))
-                        }
-                    }
-                    #endif
                 }
                 .padding(.top, 0)
                 .padding(.horizontal, 16)
@@ -209,19 +185,6 @@ struct HomeView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var tierLabel: String {
-        switch viewModel.debugTier {
-        case .core: return "CORE"
-        case .pro:  return "PRO"
-        }
-    }
-
-    private var tierColor: Color {
-        switch viewModel.debugTier {
-        case .core: return Color.blue
-        case .pro:  return Color.green
-        }
-    }
 }
 
 

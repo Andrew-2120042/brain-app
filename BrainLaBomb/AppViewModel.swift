@@ -59,24 +59,16 @@ class AppViewModel: ObservableObject {
 
     // MARK: - Tier Management
 
-    // TODO: replace with RevenueCat check when integrated
-    @Published var debugTier: AppTier = .core
-
     #if DEBUG
     @Published var hideDebugUI: Bool = false
     #endif
 
     @Published var purchasedTier: AppTier = .core
+    @Published var hasActiveEntitlement: Bool = false
     @Published var isLoadingPurchase: Bool = false
     @Published var currentOffering: Offering? = nil
 
-    var currentTier: AppTier {
-        #if DEBUG
-        return debugTier
-        #else
-        return purchasedTier
-        #endif
-    }
+    var currentTier: AppTier { purchasedTier }
 
     var coreThinksUsed: Int {
         get { UserDefaults.standard.integer(forKey: "coreThinksUsed") }
@@ -183,12 +175,15 @@ class AppViewModel: ObservableObject {
             await MainActor.run {
                 if customerInfo.entitlements["pro"]?.isActive == true {
                     self.purchasedTier = .pro
+                    self.hasActiveEntitlement = true
                     PostHogSDK.shared.capture("subscription_activated", properties: ["tier": "pro"])
                 } else if customerInfo.entitlements["core"]?.isActive == true {
                     self.purchasedTier = .core
+                    self.hasActiveEntitlement = true
                     PostHogSDK.shared.capture("subscription_activated", properties: ["tier": "core"])
                 } else {
                     self.purchasedTier = .core
+                    self.hasActiveEntitlement = false
                 }
                 PostHogSDK.shared.capture("session_started", properties: [
                     "tier": self.purchasedTier == .pro ? "pro" : "core",
@@ -222,8 +217,10 @@ class AppViewModel: ObservableObject {
                 isLoadingPurchase = false
                 if result.customerInfo.entitlements["pro"]?.isActive == true {
                     self.purchasedTier = .pro
+                    self.hasActiveEntitlement = true
                 } else if result.customerInfo.entitlements["core"]?.isActive == true {
                     self.purchasedTier = .core
+                    self.hasActiveEntitlement = true
                 }
             }
             return succeeded
@@ -242,8 +239,10 @@ class AppViewModel: ObservableObject {
             await MainActor.run {
                 if customerInfo.entitlements["pro"]?.isActive == true {
                     self.purchasedTier = .pro
+                    self.hasActiveEntitlement = true
                 } else if customerInfo.entitlements["core"]?.isActive == true {
                     self.purchasedTier = .core
+                    self.hasActiveEntitlement = true
                 }
             }
             return hasActive
