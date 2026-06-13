@@ -35,7 +35,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.brainla.bomb.pro.annual",
+      "productID" : "com.brainla.bomb.pro.annual.v2",
       "recurringSubscriptionPeriod" : "P1Y",
       "referenceName" : "Bracket Pro",
       "subscriptionGroupID" : "A1B2C3D4-0001-0001-0001-000000000010",
@@ -57,7 +57,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.brainla.bomb.core.sixmonths",
+      "productID" : "com.brainla.bomb.core.sixmonths.v2",
       "recurringSubscriptionPeriod" : "P6M",
       "referenceName" : "Bracket Core",
       "subscriptionGroupID" : "A1B2C3D4-0002-0002-0002-000000000020",

@@ -93,7 +93,7 @@ struct PaywallView: View {
                     Task {
                         if selectedPlan == 1 {
                             if let package = viewModel.currentOffering?.availablePackages.first(where: {
-                                $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual"
+                                $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual.v2"
                             }) {
                                 await viewModel.purchase(package: package)
                             } else {
@@ -102,7 +102,7 @@ struct PaywallView: View {
                             }
                         } else {
                             if let package = viewModel.currentOffering?.availablePackages.first(where: {
-                                $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths"
+                                $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths.v2"
                             }) {
                                 await viewModel.purchase(package: package)
                             } else {
@@ -213,10 +213,10 @@ struct PaywallView: View {
             PostHogSDK.shared.capture("paywall_viewed")
             Task {
                 await viewModel.fetchOfferings()
-                if let pro = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual" }) {
+                if let pro = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual.v2" }) {
                     proPrice = pro.storeProduct.localizedPriceString
                 }
-                if let core = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths" }) {
+                if let core = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths.v2" }) {
                     corePrice = core.storeProduct.localizedPriceString
                 }
                 #if DEBUG

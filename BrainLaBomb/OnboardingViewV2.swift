@@ -1657,7 +1657,7 @@ struct OnboardingViewV2: View {
 
                 Button {
                     Task {
-                        let productId = selectedPlan == 0 ? "com.brainla.bomb.pro.annual" : "com.brainla.bomb.core.sixmonths"
+                        let productId = selectedPlan == 0 ? "com.brainla.bomb.pro.annual.v2" : "com.brainla.bomb.core.sixmonths.v2"
                         if let package = viewModel.currentOffering?.availablePackages.first(where: {
                             $0.storeProduct.productIdentifier == productId
                         }) {
@@ -1743,10 +1743,10 @@ struct OnboardingViewV2: View {
             PostHogSDK.shared.capture("paywall_viewed")
             Task {
                 await viewModel.fetchOfferings()
-                if let pro = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual" }) {
+                if let pro = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual.v2" }) {
                     paywallProPrice = pro.storeProduct.localizedPriceString
                 }
-                if let core = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths" }) {
+                if let core = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths.v2" }) {
                     paywallCorePrice = core.storeProduct.localizedPriceString
                 }
                 #if DEBUG
@@ -1885,13 +1885,13 @@ struct OnboardingViewV2: View {
                 VStack(alignment: .leading, spacing: 20) {
 
                     (Text("The bad news is that you'll lose ")
-                        .font(.custom("HelveticaNeue-Light", size: 17))
+                        .font(.custom("HelveticaNeue-Light", size: 20))
                         .foregroundColor(.white.opacity(0.7))
                     + Text(displayedMomentsNumber)
-                        .font(.custom("HelveticaNeue-Light", size: 17))
+                        .font(.custom("HelveticaNeue-Light", size: 20))
                         .foregroundColor(Color(red: 0.27, green: 0.84, blue: 0.85))
                     + Text(" moments in thinking")
-                        .font(.custom("HelveticaNeue-Light", size: 17))
+                        .font(.custom("HelveticaNeue-Light", size: 20))
                         .foregroundColor(.white.opacity(0.7)))
                     .lineSpacing(5)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1902,7 +1902,7 @@ struct OnboardingViewV2: View {
                             let curr = badNewsQuotePhrase % quotes.count
                             let prev = (badNewsQuotePhrase - 1 + quotes.count) % quotes.count
                             Text(quotes[i])
-                                .font(.custom("HelveticaNeue", size: 17))
+                                .font(.custom("HelveticaNeue", size: 20))
                                 .foregroundColor(.white.opacity(0.5))
                                 .opacity(curr == i ? 1 : 0)
                                 .offset(y: curr == i ? 0 : (prev == i ? -20 : 20))
@@ -1913,7 +1913,7 @@ struct OnboardingViewV2: View {
                     .opacity(badNewsPhase >= 2 ? 1 : 0)
 
                     Text("Meaning that you'll spend")
-                        .font(.custom("HelveticaNeue-Light", size: 17))
+                        .font(.custom("HelveticaNeue-Light", size: 20))
                         .foregroundColor(.white.opacity(0.7))
                         .opacity(badNewsPhase >= 3 ? 1 : 0)
 
@@ -1924,13 +1924,13 @@ struct OnboardingViewV2: View {
                         .opacity(badNewsPhase >= 4 ? 1 : 0)
 
                     Text("Of your life hesitating. Overthinking.\nYep — just for deciding.")
-                        .font(.custom("HelveticaNeue", size: 17))
+                        .font(.custom("HelveticaNeue", size: 20))
                         .foregroundColor(.white.opacity(0.7))
                         .lineSpacing(5)
                         .opacity(badNewsPhase >= 5 ? 1 : 0)
 
                     Text("Most of it during the years\nyou were supposed to be living the most.")
-                        .font(.custom("HelveticaNeue", size: 15))
+                        .font(.custom("HelveticaNeue", size: 18))
                         .foregroundColor(.white.opacity(0.5))
                         .lineSpacing(5)
                         .italic()
@@ -2067,14 +2067,14 @@ struct OnboardingViewV2: View {
                     Spacer()
                     VStack(alignment: .leading, spacing: 20) {
                         Text("The good news is it doesn't have to stay that way.")
-                            .font(.custom("HelveticaNeue-Light", size: 17))
+                            .font(.custom("HelveticaNeue-Light", size: 20))
                             .foregroundColor(.white.opacity(0.7))
                             .lineSpacing(5)
                             .fixedSize(horizontal: false, vertical: true)
                             .opacity(goodNewsPhase >= 1 ? 1 : 0)
                         // TODO: Replace "we" with final app name once decided
                         Text("We will help you spend less time stuck between decisions and more time moving toward:")
-                            .font(.custom("HelveticaNeue", size: 17))
+                            .font(.custom("HelveticaNeue", size: 20))
                             .foregroundColor(.white.opacity(0.6))
                             .lineSpacing(5)
                             .fixedSize(horizontal: false, vertical: true)
@@ -2094,7 +2094,7 @@ struct OnboardingViewV2: View {
                         .frame(height: 46)
                         .opacity(goodNewsPhase >= 3 ? 1 : 0)
                         Text("So more of your life\ngets spent living. Not hesitating.")
-                            .font(.custom("HelveticaNeue", size: 17))
+                            .font(.custom("HelveticaNeue", size: 20))
                             .foregroundColor(.white.opacity(0.7))
                             .lineSpacing(5)
                             .opacity(goodNewsPhase >= 4 ? 1 : 0)
@@ -2127,14 +2127,14 @@ struct OnboardingViewV2: View {
                     Spacer()
                     VStack(spacing: 24) {
                         Text("The good news is it doesn't have to stay that way.")
-                            .font(.custom("HelveticaNeue-Light", size: 17))
+                            .font(.custom("HelveticaNeue-Light", size: 20))
                             .foregroundColor(.white.opacity(0.7))
                             .multilineTextAlignment(.center)
                             .lineSpacing(5)
                             .opacity(goodNewsPhase >= 1 ? 1 : 0)
                         // TODO: Replace "we" with final app name once decided
                         Text("We will help you spend less time stuck\nbetween decisions and more time moving toward:")
-                            .font(.custom("HelveticaNeue", size: 17))
+                            .font(.custom("HelveticaNeue", size: 20))
                             .foregroundColor(.white.opacity(0.6))
                             .multilineTextAlignment(.center)
                             .lineSpacing(5)
@@ -2153,7 +2153,7 @@ struct OnboardingViewV2: View {
                         .frame(height: 46)
                         .opacity(goodNewsPhase >= 3 ? 1 : 0)
                         Text("So more of your life\ngets spent living. Not hesitating.")
-                            .font(.custom("HelveticaNeue", size: 17))
+                            .font(.custom("HelveticaNeue", size: 20))
                             .foregroundColor(.white.opacity(0.7))
                             .multilineTextAlignment(.center)
                             .lineSpacing(5)
