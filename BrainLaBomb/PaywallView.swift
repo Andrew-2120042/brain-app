@@ -34,17 +34,6 @@ struct PaywallView: View {
             }
 
             VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    Button { onDismiss?(); dismiss() } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(Color(white: 0.4))
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 30)
-
                 VStack(alignment: .leading, spacing: 6) {
                     Text("your brain.")
                         .font(.custom("HelveticaNeue", size: 42))
@@ -72,8 +61,7 @@ struct PaywallView: View {
                                description: "the card was just the start. ask it everything.")
                 }
                 .padding(.horizontal, 28)
-
-                Spacer()
+                .padding(.bottom, 24)
 
                 VStack(spacing: 10) {
                     paywallPlanCard(index: 2, productId: "com.brainla.bomb.pro.weekly", title: "WEEKLY", price: weeklyPrice, subtitle: "7 days free trial", detail: "cancel anytime", isProBadge: false)
@@ -189,6 +177,19 @@ struct PaywallView: View {
                         .padding(.bottom, 32)
                 }
             }
+        }
+        .safeAreaInset(edge: .top) {
+            HStack {
+                Spacer()
+                Button { onDismiss?(); dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color(white: 0.4))
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 60)
+            .padding(.bottom, -40)
         }
         .offset(y: dragOffset)
         .gesture(

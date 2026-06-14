@@ -31,20 +31,6 @@ struct DownsellWeeklyView: View {
             }
 
             VStack(spacing: 0) {
-                HStack {
-                    Spacer()
-                    Button {
-                        PostHogSDK.shared.capture("downsell_dismissed")
-                        onDismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .medium))
-                            .foregroundColor(Color(white: 0.4))
-                    }
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
-
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Not Ready to Commit Yet?")
                         .font(.custom("HelveticaNeue", size: 42))
@@ -143,6 +129,22 @@ struct DownsellWeeklyView: View {
                     ProgressView().tint(.white).scaleEffect(1.5)
                 }
             }
+        }
+        .safeAreaInset(edge: .top) {
+            HStack {
+                Spacer()
+                Button {
+                    PostHogSDK.shared.capture("downsell_dismissed")
+                    onDismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color(white: 0.4))
+                }
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 40)
+            .padding(.bottom, 8)
         }
         .onAppear {
             PostHogSDK.shared.capture("downsell_viewed")

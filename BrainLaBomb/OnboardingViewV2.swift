@@ -96,6 +96,9 @@ struct OnboardingViewV2: View {
     @State private var onboardingConfirmationTier: AppTier = .core
     @State private var showDownsell = false
 
+    @FocusState private var nameFieldFocused: Bool
+    @FocusState private var ageFieldFocused: Bool
+
     @AppStorage("useNumericIntro") private var useNumericIntro = false
     @State private var numericParticles: [NumericIntroParticle] = []
 
@@ -530,6 +533,7 @@ struct OnboardingViewV2: View {
                     .autocorrectionDisabled()
                     .textInputAutocapitalization(.words)
                     .submitLabel(.continue)
+                    .focused($nameFieldFocused)
                     .onSubmit { submitName() }
             }
             .padding(.vertical, 12)
@@ -541,6 +545,11 @@ struct OnboardingViewV2: View {
             v2Button("Continue") { submitName() }
                 .opacity(userName.trimmingCharacters(in: .whitespaces).isEmpty ? 0.28 : 1)
                 .disabled(userName.trimmingCharacters(in: .whitespaces).isEmpty || isTransitioning)
+        }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                nameFieldFocused = true
+            }
         }
     }
 
@@ -567,6 +576,7 @@ struct OnboardingViewV2: View {
                     .foregroundColor(.white)
                     .tint(.white)
                     .keyboardType(.numberPad)
+                    .focused($ageFieldFocused)
                     .onChange(of: userAge) { newVal in
                         let digits = String(newVal.filter { $0.isNumber }.prefix(2))
                         if digits != newVal { userAge = digits }
@@ -590,6 +600,11 @@ struct OnboardingViewV2: View {
                 .disabled(!ageIsValid || isTransitioning || ageSubmitted)
         }
         .animation(.easeInOut(duration: 0.2), value: ageTooLow)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                ageFieldFocused = true
+            }
+        }
     }
 
     private var ageIsValid: Bool {
@@ -1140,7 +1155,7 @@ struct OnboardingViewV2: View {
                 if patternRevealPhase >= 3 {
                     VStack(alignment: .leading, spacing: 14) {
                         Text("Here's what that means for you:")
-                            .font(.custom("HelveticaNeue-Light", size: 14))
+                            .font(.custom("HelveticaNeue-Light", size: 16))
                             .foregroundColor(.white.opacity(0.40))
                             .opacity(patternDescriptionPhase >= 1 ? 1 : 0)
                             .animation(.easeIn(duration: 0.5), value: patternDescriptionPhase)
@@ -1162,7 +1177,7 @@ struct OnboardingViewV2: View {
                             .onAppear { loadingPulse = true }
                         } else {
                             Text(displayText)
-                                .font(.custom("HelveticaNeue-Light", size: 16))
+                                .font(.custom("HelveticaNeue-Light", size: 18))
                                 .foregroundColor(.white.opacity(0.75))
                                 .multilineTextAlignment(.leading)
                                 .lineSpacing(5)
@@ -1196,8 +1211,9 @@ struct OnboardingViewV2: View {
                 .animation(.easeIn(duration: 0.4), value: patternRevealPhase >= 5)
 
                 Text(patternSourceLine)
-                    .font(.custom("HelveticaNeue", size: 11))
-                    .foregroundColor(.white.opacity(0.20))
+                    .font(.custom("HelveticaNeue", size: 13))
+                    .foregroundColor(.white.opacity(0.25))
+                    .frame(maxWidth: .infinity)
                     .multilineTextAlignment(.center)
                     .lineSpacing(3)
                     .padding(.horizontal, 36)
@@ -1685,7 +1701,7 @@ struct OnboardingViewV2: View {
                     Button {
                         docsTab = 0
                         showDocs = true
-                    } label: { Text("Terms & Privacy").font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.28)) }
+                    } label: { Text("Terms & Privacy").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4)) }
                     .buttonStyle(PlainButtonStyle())
                     Button {
                         Task {
@@ -1703,7 +1719,7 @@ struct OnboardingViewV2: View {
                             }
                         }
                     } label: {
-                        Text("Restore").font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.28))
+                        Text("Restore").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
                     }
                     .buttonStyle(PlainButtonStyle())
                     Button {
@@ -1714,7 +1730,7 @@ struct OnboardingViewV2: View {
                             showDownsell = true
                         }
                     } label: {
-                        Text("Skip for now").font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.28))
+                        Text("Skip for now").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
                     }
                     .buttonStyle(PlainButtonStyle())
                 }
@@ -1940,6 +1956,7 @@ struct OnboardingViewV2: View {
                     .font(.custom("HelveticaNeue", size: 12))
                     .foregroundColor(.white.opacity(0.3))
                     .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
                     .lineSpacing(3)
                     .padding(.horizontal, 36)
                     .padding(.bottom, 14)
