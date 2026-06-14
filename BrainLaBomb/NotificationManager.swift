@@ -89,57 +89,228 @@ struct NotificationManager {
         }
     }
 
+    static let trialReminderIdentifiers = ["trial-reminder-day-6", "trial-reminder-day-7"]
+
     func scheduleTrialReminders() {
-        let day3Content = UNMutableNotificationContent()
-        day3Content.title = "bracket"
-        day3Content.body = "4 days left on your free trial. still thinking?"
-        day3Content.sound = .default
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .authorized else { return }
 
-        let day4Content = UNMutableNotificationContent()
-        day4Content.title = "bracket"
-        day4Content.body = "3 days left on your free trial. don't stop now."
-        day4Content.sound = .default
+            let day6Content = UNMutableNotificationContent()
+            day6Content.title = "bracket"
+            day6Content.body = "your free trial ends tomorrow. don't lose your clarity."
+            day6Content.sound = .default
 
-        let day5Content = UNMutableNotificationContent()
-        day5Content.title = "bracket"
-        day5Content.body = "2 days left on your free trial. keep thinking clearly."
-        day5Content.sound = .default
+            let day7Content = UNMutableNotificationContent()
+            day7Content.title = "bracket"
+            day7Content.body = "your free trial ends today. upgrade to keep going."
+            day7Content.sound = .default
 
-        let day6Content = UNMutableNotificationContent()
-        day6Content.title = "bracket"
-        day6Content.body = "last day of your free trial tomorrow. don't lose your clarity."
-        day6Content.sound = .default
+            let intervals: [(content: UNMutableNotificationContent, days: Int)] = [
+                (day6Content, 6),
+                (day7Content, 7)
+            ]
 
-        let day7Content = UNMutableNotificationContent()
-        day7Content.title = "bracket"
-        day7Content.body = "your free trial ends today. upgrade to keep going."
-        day7Content.sound = .default
+            UNUserNotificationCenter.current().removePendingNotificationRequests(
+                withIdentifiers: Self.trialReminderIdentifiers
+            )
 
-        let intervals: [(content: UNMutableNotificationContent, days: Int)] = [
-            (day3Content, 3),
-            (day4Content, 4),
-            (day5Content, 5),
-            (day6Content, 6),
-            (day7Content, 7)
-        ]
+            for item in intervals {
+                let trigger = UNTimeIntervalNotificationTrigger(
+                    timeInterval: TimeInterval(item.days * 24 * 60 * 60),
+                    repeats: false
+                )
+                let request = UNNotificationRequest(
+                    identifier: "trial-reminder-day-\(item.days)",
+                    content: item.content,
+                    trigger: trigger
+                )
+                UNUserNotificationCenter.current().add(request)
+            }
+        }
+    }
 
-        for item in intervals {
+    func cancelTrialReminders() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: Self.trialReminderIdentifiers
+        )
+    }
+
+    // MARK: - Re-engagement for free-tier users who skipped both paywalls
+
+    static let reEngagementIdentifiers = [
+        "bracket.reengagement.day1",
+        "bracket.reengagement.day3",
+        "bracket.reengagement.day7"
+    ]
+
+    func scheduleReEngagementNotifications() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .authorized else { return }
+
+            let day1 = UNMutableNotificationContent()
+            day1.title = "still thinking it over?"
+            day1.body = "bracket is here when you're ready."
+            day1.sound = .default
+
+            let day3 = UNMutableNotificationContent()
+            day3.title = "got a decision to make?"
+            day3.body = "open bracket and think it through."
+            day3.sound = .default
+
+            let day7 = UNMutableNotificationContent()
+            day7.title = "your first think is waiting."
+            day7.body = "try bracket free for 7 days — no commitment."
+            day7.sound = .default
+
+            let items: [(id: String, content: UNMutableNotificationContent, days: Int)] = [
+                ("bracket.reengagement.day1", day1, 1),
+                ("bracket.reengagement.day3", day3, 3),
+                ("bracket.reengagement.day7", day7, 7)
+            ]
+
+            UNUserNotificationCenter.current().removePendingNotificationRequests(
+                withIdentifiers: Self.reEngagementIdentifiers
+            )
+
+            for item in items {
+                let trigger = UNTimeIntervalNotificationTrigger(
+                    timeInterval: TimeInterval(item.days * 24 * 60 * 60),
+                    repeats: false
+                )
+                let request = UNNotificationRequest(
+                    identifier: item.id,
+                    content: item.content,
+                    trigger: trigger
+                )
+                UNUserNotificationCenter.current().add(request)
+            }
+        }
+    }
+
+    func cancelReEngagementNotifications() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: Self.reEngagementIdentifiers
+        )
+    }
+
+    func cancelAllNotifications() {
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+    }
+
+    // MARK: - Weekly trial ending reminder
+
+    static let weeklyTrialEndingIdentifier = "bracket.weekly.trial.ending"
+
+    func scheduleWeeklyTrialEndingReminder() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .authorized else { return }
+            let content = UNMutableNotificationContent()
+            content.title = "your trial ends tomorrow."
+            content.body = "keep thinking clearly with bracket."
+            content.sound = .default
             let trigger = UNTimeIntervalNotificationTrigger(
-                timeInterval: TimeInterval(item.days * 24 * 60 * 60),
+                timeInterval: 6 * 24 * 60 * 60,
                 repeats: false
             )
             let request = UNNotificationRequest(
-                identifier: "trial-reminder-day-\(item.days)",
-                content: item.content,
+                identifier: Self.weeklyTrialEndingIdentifier,
+                content: content,
+                trigger: trigger
+            )
+            UNUserNotificationCenter.current().removePendingNotificationRequests(
+                withIdentifiers: [Self.weeklyTrialEndingIdentifier]
+            )
+            UNUserNotificationCenter.current().add(request)
+        }
+    }
+
+    func cancelWeeklyTrialEndingReminder() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(
+            withIdentifiers: [Self.weeklyTrialEndingIdentifier]
+        )
+    }
+
+    #if DEBUG
+    /// Fires the same notification as the real day-6 reminder, but in 5 seconds.
+    func scheduleWeeklyTrialEndingReminderTest() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .authorized else { return }
+            let content = UNMutableNotificationContent()
+            content.title = "your trial ends tomorrow."
+            content.body = "keep thinking clearly with bracket."
+            content.sound = .default
+            let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 5, repeats: false)
+            let request = UNNotificationRequest(
+                identifier: Self.weeklyTrialEndingIdentifier + ".test",
+                content: content,
                 trigger: trigger
             )
             UNUserNotificationCenter.current().add(request)
         }
     }
 
-    func cancelAllNotifications() {
-        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
+    /// Fires the day-6 and day-7 annual trial reminders in 5s and 10s.
+    func scheduleTrialRemindersTest() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .authorized else { return }
+
+            let day6 = UNMutableNotificationContent()
+            day6.title = "bracket"
+            day6.body = "your free trial ends tomorrow. don't lose your clarity."
+            day6.sound = .default
+
+            let day7 = UNMutableNotificationContent()
+            day7.title = "bracket"
+            day7.body = "your free trial ends today. upgrade to keep going."
+            day7.sound = .default
+
+            let items: [(id: String, content: UNMutableNotificationContent, delay: TimeInterval)] = [
+                ("trial-reminder-day-6.test", day6, 5),
+                ("trial-reminder-day-7.test", day7, 10)
+            ]
+
+            for item in items {
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: item.delay, repeats: false)
+                let request = UNNotificationRequest(identifier: item.id, content: item.content, trigger: trigger)
+                UNUserNotificationCenter.current().add(request)
+            }
+        }
     }
+
+    /// Fires all 3 re-engagement notifications in 5s, 10s, 15s.
+    func scheduleReEngagementNotificationsTest() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            guard settings.authorizationStatus == .authorized else { return }
+
+            let day1 = UNMutableNotificationContent()
+            day1.title = "still thinking it over?"
+            day1.body = "bracket is here when you're ready."
+            day1.sound = .default
+
+            let day3 = UNMutableNotificationContent()
+            day3.title = "got a decision to make?"
+            day3.body = "open bracket and think it through."
+            day3.sound = .default
+
+            let day7 = UNMutableNotificationContent()
+            day7.title = "your first think is waiting."
+            day7.body = "try bracket free for 7 days — no commitment."
+            day7.sound = .default
+
+            let items: [(id: String, content: UNMutableNotificationContent, delay: TimeInterval)] = [
+                ("bracket.reengagement.day1.test", day1, 5),
+                ("bracket.reengagement.day3.test", day3, 10),
+                ("bracket.reengagement.day7.test", day7, 15)
+            ]
+
+            for item in items {
+                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: item.delay, repeats: false)
+                let request = UNNotificationRequest(identifier: item.id, content: item.content, trigger: trigger)
+                UNUserNotificationCenter.current().add(request)
+            }
+        }
+    }
+    #endif
 
     func checkPermissionStatus(completion: @escaping (Bool) -> Void) {
         UNUserNotificationCenter.current().getNotificationSettings { settings in

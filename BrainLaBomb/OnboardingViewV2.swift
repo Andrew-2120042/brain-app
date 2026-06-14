@@ -1762,6 +1762,9 @@ struct OnboardingViewV2: View {
                 .fullScreenCover(isPresented: $showDownsell) {
                     DownsellWeeklyView(viewModel: viewModel) {
                         showDownsell = false
+                        if !viewModel.hasActiveEntitlement {
+                            NotificationManager.shared.scheduleReEngagementNotifications()
+                        }
                         advanceNoHistory()
                     }
                 }

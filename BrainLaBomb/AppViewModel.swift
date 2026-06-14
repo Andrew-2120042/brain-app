@@ -210,6 +210,15 @@ class AppViewModel: ObservableObject {
                 return nil
             }()
             print("DEBUG checkSubscriptionStatus: proActive=\(proActive), coreActive=\(coreActive), productId=\(productId ?? "nil")")
+            if productId != "com.brainla.bomb.pro.weekly" {
+                NotificationManager.shared.cancelWeeklyTrialEndingReminder()
+            }
+            if productId != "com.brainla.bomb.pro.annual.v2" {
+                NotificationManager.shared.cancelTrialReminders()
+            }
+            if proActive || coreActive {
+                NotificationManager.shared.cancelReEngagementNotifications()
+            }
             await MainActor.run {
                 self.activeProductIdentifier = (proActive || coreActive) ? productId : nil
                 if proActive {
@@ -262,7 +271,10 @@ class AppViewModel: ObservableObject {
                 return nil
             }()
             let succeeded  = proActive || coreActive
-            print("DEBUG purchase: proActive=\(proActive), coreActive=\(coreActive), productId=\(productId ?? "nil")")
+            let proPeriodType = result.customerInfo.entitlements["pro"]?.periodType
+            let isWeeklyTrial = productId == "com.brainla.bomb.pro.weekly" && proPeriodType == .trial
+            let isAnnualTrial = productId == "com.brainla.bomb.pro.annual.v2" && proPeriodType == .trial
+            print("DEBUG purchase: proActive=\(proActive), coreActive=\(coreActive), productId=\(productId ?? "nil"), isWeeklyTrial=\(isWeeklyTrial), isAnnualTrial=\(isAnnualTrial)")
             await MainActor.run {
                 isLoadingPurchase = false
                 if succeeded { self.activeProductIdentifier = productId }
@@ -273,6 +285,15 @@ class AppViewModel: ObservableObject {
                     self.purchasedTier = .core
                     self.hasActiveEntitlement = true
                 }
+            }
+            if isWeeklyTrial {
+                NotificationManager.shared.scheduleWeeklyTrialEndingReminder()
+            }
+            if isAnnualTrial {
+                NotificationManager.shared.scheduleTrialReminders()
+            }
+            if succeeded {
+                NotificationManager.shared.cancelReEngagementNotifications()
             }
             return succeeded
         } catch {

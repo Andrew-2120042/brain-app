@@ -321,6 +321,15 @@ struct SettingsView: View {
                 viewModel.purchasedTier = .core
                 viewModel.activeProductIdentifier = nil
             })
+            settingsRow(label: "test weekly trial-ending notif (5s)", action: {
+                NotificationManager.shared.scheduleWeeklyTrialEndingReminderTest()
+            })
+            settingsRow(label: "test annual trial reminders (5s, 10s)", action: {
+                NotificationManager.shared.scheduleTrialRemindersTest()
+            })
+            settingsRow(label: "test re-engagement notifs (5s, 10s, 15s)", action: {
+                NotificationManager.shared.scheduleReEngagementNotificationsTest()
+            })
             Button {
                 let idx = (currencyCycle.firstIndex(of: currencyPreview) ?? 0) + 1
                 currencyPreview = currencyCycle[idx % currencyCycle.count]
