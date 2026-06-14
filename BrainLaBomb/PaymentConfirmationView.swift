@@ -29,7 +29,7 @@ struct PaymentConfirmationView: View {
 
                 Text(tier == .pro
                      ? "unlimited thinks unlocked.\nthe brain is yours now."
-                     : "300 thinks unlocked.\nstart bringing it something real.")
+                     : "start bringing it something real.\nthe brain is yours now.")
                     .font(.custom("Poppins-Regular", size: 15))
                     .foregroundColor(.white.opacity(0.45))
                     .multilineTextAlignment(.center)

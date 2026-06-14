@@ -64,11 +64,41 @@ class AppViewModel: ObservableObject {
     #endif
 
     @Published var purchasedTier: AppTier = .core
-    @Published var hasActiveEntitlement: Bool = false
+    @Published var hasActiveEntitlement: Bool = false {
+        didSet { print("DEBUG hasActiveEntitlement SET -> \(hasActiveEntitlement) (was \(oldValue))"); Thread.callStackSymbols.prefix(8).forEach { print("  \($0)") } }
+    }
     @Published var isLoadingPurchase: Bool = false
     @Published var currentOffering: Offering? = nil
+    @Published var activeProductIdentifier: String? = nil {
+        didSet { print("DEBUG activeProductIdentifier SET -> \(activeProductIdentifier ?? "nil") (was \(oldValue ?? "nil"))") }
+    }
+
+    var tierDisplayLabel: String {
+        print("DEBUG tierDisplayLabel: activeProductIdentifier=\(activeProductIdentifier ?? "nil"), hasActiveEntitlement=\(hasActiveEntitlement)")
+        guard hasActiveEntitlement else { return "free" }
+        switch activeProductIdentifier {
+        case "com.brainla.bomb.pro.weekly":        return "weekly"
+        case "com.brainla.bomb.pro.annual.v2":     return "pro"
+        case "com.brainla.bomb.core.sixmonths.v2": return "core"
+        default: return "free"
+        }
+    }
 
     var currentTier: AppTier { purchasedTier }
+
+    var isOnProAnnual: Bool {
+        guard hasActiveEntitlement else { return false }
+        return activeProductIdentifier == "com.brainla.bomb.pro.annual.v2"
+    }
+
+    var activeTier: AppTier {
+        switch activeProductIdentifier {
+        case "com.brainla.bomb.pro.weekly",
+             "com.brainla.bomb.pro.annual.v2":     return .pro
+        case "com.brainla.bomb.core.sixmonths.v2": return .core
+        default: return purchasedTier
+        }
+    }
 
     var coreThinksUsed: Int {
         get { UserDefaults.standard.integer(forKey: "coreThinksUsed") }
@@ -172,12 +202,21 @@ class AppViewModel: ObservableObject {
     func checkSubscriptionStatus() async {
         do {
             let customerInfo = try await Purchases.shared.customerInfo()
+            let proActive  = customerInfo.entitlements["pro"]?.isActive == true
+            let coreActive = customerInfo.entitlements["core"]?.isActive == true
+            let productId: String? = {
+                if proActive  { return customerInfo.entitlements["pro"]?.productIdentifier }
+                if coreActive { return customerInfo.entitlements["core"]?.productIdentifier }
+                return nil
+            }()
+            print("DEBUG checkSubscriptionStatus: proActive=\(proActive), coreActive=\(coreActive), productId=\(productId ?? "nil")")
             await MainActor.run {
-                if customerInfo.entitlements["pro"]?.isActive == true {
+                self.activeProductIdentifier = (proActive || coreActive) ? productId : nil
+                if proActive {
                     self.purchasedTier = .pro
                     self.hasActiveEntitlement = true
                     PostHogSDK.shared.capture("subscription_activated", properties: ["tier": "pro"])
-                } else if customerInfo.entitlements["core"]?.isActive == true {
+                } else if coreActive {
                     self.purchasedTier = .core
                     self.hasActiveEntitlement = true
                     PostHogSDK.shared.capture("subscription_activated", properties: ["tier": "core"])
@@ -190,7 +229,9 @@ class AppViewModel: ObservableObject {
                     "think_count": self.thinksUsed
                 ])
             }
-        } catch {}
+        } catch {
+            print("DEBUG RevenueCat error: \(error)")
+        }
     }
 
     func fetchOfferings() async {
@@ -199,7 +240,9 @@ class AppViewModel: ObservableObject {
             await MainActor.run {
                 self.currentOffering = offerings.current
             }
-        } catch {}
+        } catch {
+            print("DEBUG RevenueCat error: \(error)")
+        }
     }
 
     @discardableResult
@@ -211,14 +254,22 @@ class AppViewModel: ObservableObject {
                 await MainActor.run { isLoadingPurchase = false }
                 return false
             }
-            let succeeded = result.customerInfo.entitlements["pro"]?.isActive == true ||
-                            result.customerInfo.entitlements["core"]?.isActive == true
+            let proActive  = result.customerInfo.entitlements["pro"]?.isActive == true
+            let coreActive = result.customerInfo.entitlements["core"]?.isActive == true
+            let productId: String? = {
+                if proActive  { return result.customerInfo.entitlements["pro"]?.productIdentifier }
+                if coreActive { return result.customerInfo.entitlements["core"]?.productIdentifier }
+                return nil
+            }()
+            let succeeded  = proActive || coreActive
+            print("DEBUG purchase: proActive=\(proActive), coreActive=\(coreActive), productId=\(productId ?? "nil")")
             await MainActor.run {
                 isLoadingPurchase = false
-                if result.customerInfo.entitlements["pro"]?.isActive == true {
+                if succeeded { self.activeProductIdentifier = productId }
+                if proActive {
                     self.purchasedTier = .pro
                     self.hasActiveEntitlement = true
-                } else if result.customerInfo.entitlements["core"]?.isActive == true {
+                } else if coreActive {
                     self.purchasedTier = .core
                     self.hasActiveEntitlement = true
                 }
@@ -234,13 +285,21 @@ class AppViewModel: ObservableObject {
     func restorePurchases() async -> Bool {
         do {
             let customerInfo = try await Purchases.shared.restorePurchases()
-            let hasActive = customerInfo.entitlements["pro"]?.isActive == true ||
-                            customerInfo.entitlements["core"]?.isActive == true
+            let proActive  = customerInfo.entitlements["pro"]?.isActive == true
+            let coreActive = customerInfo.entitlements["core"]?.isActive == true
+            let productId: String? = {
+                if proActive  { return customerInfo.entitlements["pro"]?.productIdentifier }
+                if coreActive { return customerInfo.entitlements["core"]?.productIdentifier }
+                return nil
+            }()
+            let hasActive  = proActive || coreActive
+            print("DEBUG restorePurchases: proActive=\(proActive), coreActive=\(coreActive), productId=\(productId ?? "nil")")
             await MainActor.run {
-                if customerInfo.entitlements["pro"]?.isActive == true {
+                if hasActive { self.activeProductIdentifier = productId }
+                if proActive {
                     self.purchasedTier = .pro
                     self.hasActiveEntitlement = true
-                } else if customerInfo.entitlements["core"]?.isActive == true {
+                } else if coreActive {
                     self.purchasedTier = .core
                     self.hasActiveEntitlement = true
                 }

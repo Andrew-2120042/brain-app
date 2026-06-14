@@ -28,6 +28,8 @@ struct SettingsView: View {
                         divider
                         feedbackSection
                         divider
+                        helpSection
+                        divider
                         dangerSection
                         #if DEBUG
                         divider
@@ -72,7 +74,7 @@ struct SettingsView: View {
                     .font(.custom("HelveticaNeue", size: 15))
                     .foregroundColor(Color(white: 0.6))
                 Spacer()
-                Text(viewModel.hasActiveEntitlement ? (viewModel.currentTier == .pro ? "pro" : "core") : "free")
+                Text(viewModel.tierDisplayLabel)
                     .font(.custom("HelveticaNeue", size: 15))
                     .foregroundColor(.white)
             }
@@ -97,7 +99,7 @@ struct SettingsView: View {
                     value: "\(viewModel.thinksUsed)"
                 )
             }
-            if viewModel.currentTier != .pro {
+            if !viewModel.isOnProAnnual {
                 Button { showPaywall = true } label: {
                     Text("unlock unlimited thinks")
                         .font(.custom("HelveticaNeue", size: 15))
@@ -179,7 +181,7 @@ struct SettingsView: View {
             settingsRow(label: "send feedback", action: {
                 let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
                 let body = "App version: \(version)\n\n"
-                let urlString = "mailto:godiandrewwilson@gmail.com?subject=Feedback&body=\(body)"
+                let urlString = "mailto:bracketapp26@gmail.com?subject=Feedback&body=\(body)"
                     .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
                 if let url = URL(string: urlString) {
                     UIApplication.shared.open(url)
@@ -193,7 +195,7 @@ struct SettingsView: View {
                 .padding(.bottom, 14)
 
             Button(action: {
-                let email = "godiandrewwilson@gmail.com"
+                let email = "bracketapp26@gmail.com"
                 let subject = "Feature Request"
                 let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
                 let body = "App version: \(version)\n\nFeature request:\n"
@@ -217,6 +219,42 @@ struct SettingsView: View {
             }
 
             Text("got an idea? we want to hear it.")
+                .font(.custom("Poppins-Regular", size: 12))
+                .foregroundColor(Color(white: 0.3))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 14)
+        }
+    }
+
+    private var helpSection: some View {
+        VStack(spacing: 0) {
+            sectionHeader("need help?")
+            Button(action: {
+                let email = "bracketapp26@gmail.com"
+                let subject = "Need Help"
+                let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+                let body = "App version: \(version)\n\nDescribe the issue:\n"
+                let urlString = "mailto:\(email)?subject=\(subject)&body=\(body)"
+                    .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                if let url = URL(string: urlString) {
+                    UIApplication.shared.open(url)
+                }
+            }) {
+                HStack {
+                    Text("contact support")
+                        .font(.custom("HelveticaNeue", size: 15))
+                        .foregroundColor(.white)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(white: 0.3))
+                }
+                .padding(.horizontal, 24)
+                .padding(.vertical, 14)
+            }
+
+            Text("stuck or something not working? we'll get back to you.")
                 .font(.custom("Poppins-Regular", size: 12))
                 .foregroundColor(Color(white: 0.3))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -277,6 +315,11 @@ struct SettingsView: View {
             settingsRow(label: "test loading screen", action: {
                 dismiss()
                 viewModel.appState = .processingFirst
+            })
+            settingsRow(label: "reset payment (local)", action: {
+                viewModel.hasActiveEntitlement = false
+                viewModel.purchasedTier = .core
+                viewModel.activeProductIdentifier = nil
             })
             Button {
                 let idx = (currencyCycle.firstIndex(of: currencyPreview) ?? 0) + 1

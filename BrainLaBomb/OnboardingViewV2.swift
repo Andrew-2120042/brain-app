@@ -94,6 +94,7 @@ struct OnboardingViewV2: View {
     @State private var paywallCorePrice = "$59.99"
     @State private var showOnboardingConfirmation = false
     @State private var onboardingConfirmationTier: AppTier = .core
+    @State private var showDownsell = false
 
     @AppStorage("useNumericIntro") private var useNumericIntro = false
     @State private var numericParticles: [NumericIntroParticle] = []
@@ -1390,40 +1391,18 @@ struct OnboardingViewV2: View {
                 Spacer()
 
                 VStack(spacing: 0) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("\"the brain\" Would Like to\nSend You Notifications")
-                            .font(.system(size: 17, weight: .semibold))
-                            .foregroundColor(.white)
-                        Text("Notifications may include alerts, sounds, and icon badges. These can be configured in Settings.")
-                            .font(.system(size: 13))
-                            .foregroundColor(Color(white: 0.65))
-                            .lineSpacing(3)
-                        Rectangle().fill(Color.white.opacity(0.15)).frame(height: 1).padding(.top, 4)
-                        HStack(spacing: 0) {
-                            Text("Don't Allow")
-                                .font(.system(size: 15))
-                                .foregroundColor(Color(white: 0.42))
-                                .frame(maxWidth: .infinity)
-                            Rectangle().fill(Color.white.opacity(0.15)).frame(width: 1, height: 40)
-                            Text("Allow")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.white)
-                                .frame(maxWidth: .infinity)
-                        }
-                        .frame(height: 40)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 18)
-                    .background(Color(white: 0.18))
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                    .overlay(RoundedRectangle(cornerRadius: 14).stroke(teal, lineWidth: 2))
+                    Image("notification_prompt")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
+                        .padding(.horizontal, 12)
 
                     HStack {
                         Spacer()
                         Image(systemName: "arrow.up")
                             .font(.system(size: 28, weight: .light))
                             .foregroundColor(teal)
-                        Spacer().frame(width: 44)
+                        Spacer().frame(width: 80)
                     }
                     .padding(.top, 12)
                 }
@@ -1657,14 +1636,17 @@ struct OnboardingViewV2: View {
 
                 Button {
                     Task {
-                        let productId = selectedPlan == 0 ? "com.brainla.bomb.pro.annual.v2" : "com.brainla.bomb.core.sixmonths.v2"
+                        let productId: String = selectedPlan == 0 ? "com.brainla.bomb.pro.annual.v2" : "com.brainla.bomb.core.sixmonths.v2"
+                        let selectedTier: AppTier = selectedPlan == 0 ? .pro : .core
+                        print("DEBUG onboarding paywall buy: selectedPlan=\(selectedPlan), selectedTier=\(selectedTier)")
                         if let package = viewModel.currentOffering?.availablePackages.first(where: {
                             $0.storeProduct.productIdentifier == productId
                         }) {
                             let success = await viewModel.purchase(package: package)
                             if success {
                                 await MainActor.run {
-                                    onboardingConfirmationTier = viewModel.purchasedTier
+                                    print("DEBUG onboarding confirmation tier = \(selectedTier)")
+                                    onboardingConfirmationTier = selectedTier
                                     showOnboardingConfirmation = true
                                 }
                             }
@@ -1710,7 +1692,7 @@ struct OnboardingViewV2: View {
                             let restored = await viewModel.restorePurchases()
                             if restored {
                                 await MainActor.run {
-                                    onboardingConfirmationTier = viewModel.purchasedTier
+                                    onboardingConfirmationTier = viewModel.activeTier
                                     showOnboardingConfirmation = true
                                 }
                             } else {
@@ -1726,7 +1708,11 @@ struct OnboardingViewV2: View {
                     .buttonStyle(PlainButtonStyle())
                     Button {
                         PostHogSDK.shared.capture("paywall_skipped")
-                        advanceNoHistory()
+                        if viewModel.hasActiveEntitlement {
+                            advanceNoHistory()
+                        } else {
+                            showDownsell = true
+                        }
                     } label: {
                         Text("Skip for now").font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.28))
                     }
@@ -1771,6 +1757,15 @@ struct OnboardingViewV2: View {
                 advanceNoHistory()
             }
         }
+        .background(
+            EmptyView()
+                .fullScreenCover(isPresented: $showDownsell) {
+                    DownsellWeeklyView(viewModel: viewModel) {
+                        showDownsell = false
+                        advanceNoHistory()
+                    }
+                }
+        )
     }
 
     private func pwPlanCard(_ idx: Int, _ title: String, _ price: String, _ badge: String, _ features: [String] = [], _ billingLine: String = "") -> some View {

@@ -73,7 +73,7 @@ struct InputPageView: View {
                         .padding(.horizontal, 20)
 
                     if text.isEmpty {
-                        Text("Describe what you're deciding.\nBe as vague or specific as you want.")
+                        Text("The more context, the better.\nStart anywhere.")
                             .font(.system(size: 20, weight: .regular))
                             .foregroundColor(Color(white: 0.22))
                             .lineSpacing(4)

@@ -42,6 +42,7 @@
 		CFACBB94CA0623C5E121BBFE /* DecisionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49E6F6A2A9C1654C6B95133C /* DecisionCardView.swift */; };
 		D0C5A112B3E4961078D2F001 /* DocsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C5A112B3E4961078D2F002 /* DocsView.swift */; };
 		D0C5A112B3E4961078D2F003 /* PaymentConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C5A112B3E4961078D2F004 /* PaymentConfirmationView.swift */; };
+		D0C5A112B3E4961078D2F005 /* DownsellWeeklyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0C5A112B3E4961078D2F006 /* DownsellWeeklyView.swift */; };
 		D3E6F9B2C4A5072189E3F046 /* OnboardingViewV2.swift in Sources */ = {isa = PBXBuildFile; fileRef = C2D5F8A1B3E4961078D2F935 /* OnboardingViewV2.swift */; };
 		DA97171DA24CFD9F4C2B87C7 /* QuestionCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 939887F0AD182A6E29436A70 /* QuestionCardView.swift */; };
 		DBC667B976995CFF1781B742 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE74AFA51AA8FD478C4C31D5 /* ContentView.swift */; };
@@ -98,6 +99,8 @@
 		CFCC3145850BF7DB96778604 /* CardThicknessOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardThicknessOverlay.swift; sourceTree = "<group>"; };
 		D0C5A112B3E4961078D2F002 /* DocsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocsView.swift; sourceTree = "<group>"; };
 		D0C5A112B3E4961078D2F004 /* PaymentConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentConfirmationView.swift; sourceTree = "<group>"; };
+		D0C5A112B3E4961078D2F006 /* DownsellWeeklyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DownsellWeeklyView.swift; sourceTree = "<group>"; };
+		D0C5A112B3E4961078D2F008 /* Products.storekit */ = {isa = PBXFileReference; lastKnownFileType = text.json.storekit; path = Products.storekit; sourceTree = "<group>"; };
 		D788A04806AD19CE0F6B19BE /* NotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationManager.swift; sourceTree = "<group>"; };
 		DD001122EE003344FF005567 /* loop_10s_hd-7.mp4 */ = {isa = PBXFileReference; lastKnownFileType = file; path = "loop_10s_hd-7.mp4"; sourceTree = "<group>"; };
 		E7433B793F4F80856102E9C1 /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
@@ -163,6 +166,8 @@
 				CE74AFA51AA8FD478C4C31D5 /* ContentView.swift */,
 				D0C5A112B3E4961078D2F002 /* DocsView.swift */,
 				D0C5A112B3E4961078D2F004 /* PaymentConfirmationView.swift */,
+				D0C5A112B3E4961078D2F006 /* DownsellWeeklyView.swift */,
+				D0C5A112B3E4961078D2F008 /* Products.storekit */,
 				DD001122EE003344FF005567 /* loop_10s_hd-7.mp4 */,
 				FF001122AA003344BB005567 /* loop_10s_hd-10.mov */,
 				AA112233BB004455CC006678 /* 1780313101639601.mp4 */,
@@ -299,6 +304,7 @@
 				DBC667B976995CFF1781B742 /* ContentView.swift in Sources */,
 				D0C5A112B3E4961078D2F001 /* DocsView.swift in Sources */,
 				D0C5A112B3E4961078D2F003 /* PaymentConfirmationView.swift in Sources */,
+				D0C5A112B3E4961078D2F005 /* DownsellWeeklyView.swift in Sources */,
 				BC9F17847F7105F897C94AD1 /* DecisionCard.swift in Sources */,
 				CFACBB94CA0623C5E121BBFE /* DecisionCardView.swift in Sources */,
 				26D69BE03B69574B489986C5 /* DecisionEngine.swift in Sources */,
@@ -387,7 +393,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = A4FXWA835F;
 				INFOPLIST_FILE = BrainLaBomb/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Bracket;
@@ -473,7 +479,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 7;
+				CURRENT_PROJECT_VERSION = 8;
 				DEVELOPMENT_TEAM = A4FXWA835F;
 				INFOPLIST_FILE = BrainLaBomb/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Bracket;

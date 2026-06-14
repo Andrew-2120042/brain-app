@@ -15,6 +15,7 @@ struct PaywallView: View {
     @State private var confirmationTier: AppTier = .core
     @State private var proPrice: String = "$99.99"
     @State private var corePrice: String = "$59.99"
+    @State private var weeklyPrice: String = "$5.99"
 
     private var paywallVideoURL: URL? {
         Bundle.main.url(forResource: "paywall_bg", withExtension: "mov")
@@ -42,7 +43,7 @@ struct PaywallView: View {
                     }
                 }
                 .padding(.horizontal, 24)
-                .padding(.top, 96)
+                .padding(.top, 30)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("your brain.")
@@ -54,65 +55,70 @@ struct PaywallView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24)
-                .padding(.top, -40)
+                .padding(.top, 8)
                 .padding(.bottom, 20)
 
                 VStack(spacing: 0) {
                     paywallRow(icon: "infinity",
                                title: "think without limits.",
-                               description: "no cap. no cooldown. whenever you need it.")
-                    paywallDivider
-                    paywallRow(icon: "person.fill",
-                               title: "pattern identity.",
-                               description: "think enough and your brain starts to reveal itself.")
+                               description: "whenever you need it. however often you need it.")
                     paywallDivider
                     paywallRow(icon: "sparkles",
-                               title: "full archetype.",
-                               description: "every decision leaves a mark. see exactly what yours says.")
+                               title: "pattern + archetype.",
+                               description: "your brain reveals itself. see exactly how you think and decide.")
                     paywallDivider
                     paywallRow(icon: "bubble.left.fill",
                                title: "chat about any think.",
                                description: "the card was just the start. ask it everything.")
-                    paywallDivider
-                    paywallRow(icon: "clock.fill",
-                               title: "full think history.",
-                               description: "every think saved. watch how you're wired.")
                 }
                 .padding(.horizontal, 28)
 
                 Spacer()
 
                 VStack(spacing: 10) {
-                    paywallPlanCard(index: 0, title: "CORE", price: corePrice, subtitle: "300 thinks · 6 months", detail: "everything unlocked", isProBadge: false)
-                    paywallPlanCard(index: 1, title: "PRO", price: proPrice, subtitle: "unlimited thinks", detail: "chat + full memory", isProBadge: true)
+                    paywallPlanCard(index: 2, productId: "com.brainla.bomb.pro.weekly", title: "WEEKLY", price: weeklyPrice, subtitle: "7 days free trial", detail: "cancel anytime", isProBadge: false)
+                    paywallPlanCard(index: 0, productId: "com.brainla.bomb.core.sixmonths.v2", title: "CORE", price: corePrice, subtitle: "300 thinks · 6 months", detail: "everything unlocked", isProBadge: false)
+                    paywallPlanCard(index: 1, productId: "com.brainla.bomb.pro.annual.v2", title: "PRO", price: proPrice, subtitle: "unlimited thinks", detail: "chat + full memory", isProBadge: true)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 24)
 
                 Button(action: {
                     Task {
-                        if selectedPlan == 1 {
-                            if let package = viewModel.currentOffering?.availablePackages.first(where: {
-                                $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual.v2"
-                            }) {
-                                await viewModel.purchase(package: package)
-                            } else {
+                        let productId: String
+                        let selectedTier: AppTier
+                        switch selectedPlan {
+                        case 1:  productId = "com.brainla.bomb.pro.annual.v2";   selectedTier = .pro
+                        case 2:  productId = "com.brainla.bomb.pro.weekly";      selectedTier = .pro
+                        default: productId = "com.brainla.bomb.core.sixmonths.v2"; selectedTier = .core
+                        }
+                        print("DEBUG in-app paywall buy: selectedPlan=\(selectedPlan), selectedTier=\(selectedTier)")
+                        guard let package = viewModel.currentOffering?.availablePackages.first(where: {
+                            $0.storeProduct.productIdentifier == productId
+                        }) else {
+                            await MainActor.run {
                                 purchaseErrorMessage = "Unable to load subscription. Please try again."
                                 showPurchaseError = true
                             }
-                        } else {
-                            if let package = viewModel.currentOffering?.availablePackages.first(where: {
-                                $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths.v2"
-                            }) {
-                                await viewModel.purchase(package: package)
-                            } else {
-                                purchaseErrorMessage = "Unable to load subscription. Please try again."
-                                showPurchaseError = true
+                            return
+                        }
+                        let success = await viewModel.purchase(package: package)
+                        if success {
+                            await MainActor.run {
+                                print("DEBUG in-app confirmation tier = \(selectedTier)")
+                                confirmationTier = selectedTier
+                                showConfirmation = true
                             }
                         }
                     }
                 }) {
-                    Text(selectedPlan == 0 ? "get Core" : "start my 7-day free trial")
+                    Text({
+                        switch selectedPlan {
+                        case 1: return "start my 7-day free trial"
+                        case 2: return "try weekly · 7 days free"
+                        default: return "get Core"
+                        }
+                    }())
                         .font(.custom("HelveticaNeue", size: 17))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
@@ -128,7 +134,12 @@ struct PaywallView: View {
                     Button(action: {
                         Task {
                             let restored = await viewModel.restorePurchases()
-                            if !restored {
+                            if restored {
+                                await MainActor.run {
+                                    confirmationTier = viewModel.activeTier
+                                    showConfirmation = true
+                                }
+                            } else {
                                 await MainActor.run {
                                     purchaseErrorMessage = "No active subscription found for this Apple ID."
                                     showPurchaseError = true
@@ -163,13 +174,18 @@ struct PaywallView: View {
 
                 if selectedPlan == 1 {
                     Text("7 days free, then \(proPrice)/year. Cancel anytime.")
-                        .font(.custom("HelveticaNeue", size: 11))
-                        .foregroundColor(Color(white: 0.3))
+                        .font(.custom("HelveticaNeue", size: 13))
+                        .foregroundColor(Color(white: 0.4))
+                        .padding(.bottom, 32)
+                } else if selectedPlan == 2 {
+                    Text("7 days free, then \(weeklyPrice)/week. Cancel anytime.")
+                        .font(.custom("HelveticaNeue", size: 13))
+                        .foregroundColor(Color(white: 0.4))
                         .padding(.bottom, 32)
                 } else {
                     Text("300 thinks. \(corePrice) for 6 months. Cancel anytime.")
-                        .font(.custom("HelveticaNeue", size: 11))
-                        .foregroundColor(Color(white: 0.3))
+                        .font(.custom("HelveticaNeue", size: 13))
+                        .foregroundColor(Color(white: 0.4))
                         .padding(.bottom, 32)
                 }
             }
@@ -219,11 +235,14 @@ struct PaywallView: View {
                 if let core = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths.v2" }) {
                     corePrice = core.storeProduct.localizedPriceString
                 }
+                if let weekly = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.weekly" }) {
+                    weeklyPrice = weekly.storeProduct.localizedPriceString
+                }
                 #if DEBUG
                 switch UserDefaults.standard.string(forKey: "debug_currencyPreview") ?? "off" {
-                case "USD": proPrice = "$99.99";      corePrice = "$59.99"
-                case "GBP": proPrice = "£79.99";      corePrice = "£49.99"
-                case "SGD": proPrice = "S$129.99";    corePrice = "S$79.99"
+                case "USD": proPrice = "$99.99";      corePrice = "$59.99";    weeklyPrice = "$5.99"
+                case "GBP": proPrice = "£79.99";      corePrice = "£49.99";    weeklyPrice = "£4.99"
+                case "SGD": proPrice = "S$129.99";    corePrice = "S$79.99";   weeklyPrice = "S$7.99"
                 default: break
                 }
                 #endif
@@ -242,17 +261,11 @@ struct PaywallView: View {
                 dismiss()
             }
         }
-        .onChange(of: viewModel.hasActiveEntitlement) { hasIt in
-            guard hasIt, !showConfirmation else { return }
-            let tier = viewModel.purchasedTier
-            PostHogSDK.shared.capture("purchase_completed", properties: ["tier": tier == .pro ? "pro" : "core"])
-            confirmationTier = tier
-            showConfirmation = true
-        }
     }
 
-    private func paywallPlanCard(index: Int, title: String, price: String, subtitle: String, detail: String, isProBadge: Bool) -> some View {
+    private func paywallPlanCard(index: Int, productId: String, title: String, price: String, subtitle: String, detail: String, isProBadge: Bool) -> some View {
         let isSelected = selectedPlan == index
+        let isCurrent = viewModel.hasActiveEntitlement && viewModel.activeProductIdentifier == productId
         return Button {
             selectedPlan = index
         } label: {
@@ -291,6 +304,20 @@ struct PaywallView: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(isSelected ? Color.white : Color(white: 0.12), lineWidth: 1)
             )
+            .overlay(alignment: .bottomTrailing) {
+                if isCurrent {
+                    Text("CURRENT")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.black)
+                        .tracking(0.5)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Color.white)
+                        .clipShape(Capsule())
+                        .padding(.trailing, 12)
+                        .padding(.bottom, 10)
+                }
+            }
         }
         .buttonStyle(PlainButtonStyle())
     }

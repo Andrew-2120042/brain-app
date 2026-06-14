@@ -45,6 +45,35 @@
       "adHocOffers" : [
 
       ],
+      "displayPrice" : "5.99",
+      "familyShareable" : false,
+      "groupNumber" : 1,
+      "internalID" : "A1B2C3D4-0001-0001-0001-000000000003",
+      "introductoryOffer" : {
+        "duration" : 1,
+        "durationUnit" : "WEEK",
+        "numberOfPeriods" : 1,
+        "offerIdentifier" : "free_trial_1_week_weekly",
+        "offerMode" : "FREE_TRIAL",
+        "periodUnit" : "WEEK"
+      },
+      "localizations" : [
+        {
+          "description" : "Unlimited thinks, chat, and full memory.",
+          "displayName" : "Bracket Pro Weekly",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.brainla.bomb.pro.weekly",
+      "recurringSubscriptionPeriod" : "P1W",
+      "referenceName" : "Bracket Pro Weekly",
+      "subscriptionGroupID" : "A1B2C3D4-0001-0001-0001-000000000010",
+      "type" : "RecurringSubscription"
+    },
+    {
+      "adHocOffers" : [
+
+      ],
       "displayPrice" : "59.99",
       "familyShareable" : false,
       "groupNumber" : 2,
