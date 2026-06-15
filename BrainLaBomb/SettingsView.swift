@@ -30,6 +30,8 @@ struct SettingsView: View {
                         divider
                         helpSection
                         divider
+                        testingSection
+                        divider
                         dangerSection
                         #if DEBUG
                         divider
@@ -49,12 +51,12 @@ struct SettingsView: View {
 
     private var headerView: some View {
         HStack {
-            Text("settings")
+            Text("Settings")
                 .font(.custom("HelveticaNeue", size: 28))
                 .foregroundColor(.white)
             Spacer()
             Button { dismiss() } label: {
-                Text("done")
+                Text("Done")
                     .font(.system(size: 15, weight: .medium))
                     .foregroundColor(Color(white: 0.5))
             }
@@ -70,7 +72,7 @@ struct SettingsView: View {
         VStack(spacing: 0) {
             sectionHeader("your brain")
             HStack {
-                Text("current plan")
+                Text("Current Plan")
                     .font(.custom("HelveticaNeue", size: 15))
                     .foregroundColor(Color(white: 0.6))
                 Spacer()
@@ -82,26 +84,26 @@ struct SettingsView: View {
             .padding(.vertical, 14)
             if viewModel.hasActiveEntitlement && viewModel.currentTier == .core {
                 settingsRow(
-                    label: "thinks used",
+                    label: "Thinks Used",
                     value: "\(viewModel.coreThinksUsed) of \(viewModel.coreThinkLimit)"
                 )
                 settingsRow(
-                    label: "\(viewModel.coreThinksRemaining) thinks remaining",
+                    label: "\(viewModel.coreThinksRemaining) Thinks Remaining",
                     value: nil
                 )
             } else if viewModel.hasActiveEntitlement {
                 settingsRow(
-                    label: "chat messages this month",
+                    label: "Chat Messages This Month",
                     value: "\(viewModel.monthlyChatCount)"
                 )
                 settingsRow(
-                    label: "thinks used total",
+                    label: "Thinks Used Total",
                     value: "\(viewModel.thinksUsed)"
                 )
             }
             if !viewModel.isOnProAnnual {
                 Button { showPaywall = true } label: {
-                    Text("unlock unlimited thinks")
+                    Text("Unlock Unlimited Thinks")
                         .font(.custom("HelveticaNeue", size: 15))
                         .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
@@ -121,7 +123,7 @@ struct SettingsView: View {
             sectionHeader("notifications")
 
             HStack {
-                Text("daily notifications")
+                Text("Daily Notifications")
                     .font(.system(size: 15, weight: .regular))
                     .foregroundColor(.white)
                 Spacer()
@@ -135,7 +137,7 @@ struct SettingsView: View {
             .padding(.horizontal, 24)
             .padding(.vertical, 14)
 
-            Text("once a day. always relevant.")
+            Text("Once a day. Always relevant.")
                 .font(.system(size: 12, weight: .regular))
                 .foregroundColor(Color(white: 0.3))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -147,16 +149,16 @@ struct SettingsView: View {
     private var aboutSection: some View {
         VStack(spacing: 0) {
             sectionHeader("about")
-            settingsRow(label: "privacy policy", action: {
+            settingsRow(label: "Privacy Policy", action: {
                 docsTab = 1
                 showDocs = true
             })
-            settingsRow(label: "terms of service", action: {
+            settingsRow(label: "Terms of Service", action: {
                 docsTab = 0
                 showDocs = true
             })
             settingsRow(
-                label: "version",
+                label: "Version",
                 value: Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
             )
         }
@@ -178,7 +180,7 @@ struct SettingsView: View {
     private var feedbackSection: some View {
         VStack(spacing: 0) {
             sectionHeader("feedback")
-            settingsRow(label: "send feedback", action: {
+            settingsRow(label: "Send Feedback", action: {
                 let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
                 let body = "App version: \(version)\n\n"
                 let urlString = "mailto:bracketapp26@gmail.com?subject=Feedback&body=\(body)"
@@ -187,7 +189,7 @@ struct SettingsView: View {
                     UIApplication.shared.open(url)
                 }
             })
-            Text("we read everything.")
+            Text("We read everything.")
                 .font(.system(size: 12, weight: .regular))
                 .foregroundColor(Color(white: 0.3))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -206,7 +208,7 @@ struct SettingsView: View {
                 }
             }) {
                 HStack {
-                    Text("request a feature")
+                    Text("Request a Feature")
                         .font(.custom("HelveticaNeue", size: 15))
                         .foregroundColor(.white)
                     Spacer()
@@ -218,7 +220,7 @@ struct SettingsView: View {
                 .padding(.vertical, 14)
             }
 
-            Text("got an idea? we want to hear it.")
+            Text("Got an idea? We want to hear it.")
                 .font(.custom("Poppins-Regular", size: 12))
                 .foregroundColor(Color(white: 0.3))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -242,7 +244,7 @@ struct SettingsView: View {
                 }
             }) {
                 HStack {
-                    Text("contact support")
+                    Text("Contact Support")
                         .font(.custom("HelveticaNeue", size: 15))
                         .foregroundColor(.white)
                     Spacer()
@@ -254,7 +256,30 @@ struct SettingsView: View {
                 .padding(.vertical, 14)
             }
 
-            Text("stuck or something not working? we'll get back to you.")
+            Text("Stuck or something not working? We'll get back to you.")
+                .font(.custom("Poppins-Regular", size: 12))
+                .foregroundColor(Color(white: 0.3))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 14)
+        }
+    }
+
+    // TEMP — visible in release for TestFlight UI testing. Remove before App Store submission.
+    private var testingSection: some View {
+        VStack(spacing: 0) {
+            sectionHeader("testing")
+            settingsRow(label: "Show In-App Paywall", action: {
+                showPaywall = true
+            })
+            settingsRow(label: "Show Onboarding Paywall", action: {
+                UserDefaults.standard.set(true, forKey: "test_jumpToPaywallStep")
+                UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
+                UserDefaults.standard.removeObject(forKey: Constants.onboardingProgressKey)
+                NotificationCenter.default.post(name: .replayOnboarding, object: nil)
+                dismiss()
+            })
+            Text("Temporary — remove before release.")
                 .font(.custom("Poppins-Regular", size: 12))
                 .foregroundColor(Color(white: 0.3))
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -269,7 +294,7 @@ struct SettingsView: View {
 
             Button { showResetHistoryConfirmation = true } label: {
                 HStack {
-                    Text("clear think history")
+                    Text("Clear Think History")
                         .font(.system(size: 15, weight: .regular))
                         .foregroundColor(Color(red: 0.8, green: 0.2, blue: 0.2))
                     Spacer()
@@ -277,7 +302,7 @@ struct SettingsView: View {
                 .padding(.horizontal, 24)
                 .padding(.vertical, 14)
             }
-            Text("removes all your thinks and resets the brain's memory of you. your account and usage are kept.")
+            Text("Removes all your thinks and resets the brain's memory of you. Your account and usage are kept.")
                 .font(.system(size: 12, weight: .regular))
                 .foregroundColor(Color(white: 0.3))
                 .lineSpacing(4)
@@ -285,14 +310,14 @@ struct SettingsView: View {
                 .padding(.horizontal, 24)
                 .padding(.bottom, 20)
         }
-        .alert("clear think history?", isPresented: $showResetHistoryConfirmation) {
-            Button("cancel", role: .cancel) {}
-            Button("clear history", role: .destructive) {
+        .alert("Clear Think History?", isPresented: $showResetHistoryConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Clear History", role: .destructive) {
                 viewModel.resetBrainMemory()
                 dismiss()
             }
         } message: {
-            Text("this removes all your thinks, pattern data, and memory. cannot be undone.")
+            Text("This removes all your thinks, pattern data, and memory. Cannot be undone.")
         }
     }
 
@@ -306,28 +331,28 @@ struct SettingsView: View {
     private var debugSection: some View {
         VStack(spacing: 0) {
             sectionHeader("debug")
-            settingsRow(label: "replay onboarding", action: {
+            settingsRow(label: "Replay Onboarding", action: {
                 UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
                 UserDefaults.standard.removeObject(forKey: Constants.onboardingProgressKey)
                 NotificationCenter.default.post(name: .replayOnboarding, object: nil)
                 dismiss()
             })
-            settingsRow(label: "test loading screen", action: {
+            settingsRow(label: "Test Loading Screen", action: {
                 dismiss()
                 viewModel.appState = .processingFirst
             })
-            settingsRow(label: "reset payment (local)", action: {
+            settingsRow(label: "Reset Payment (Local)", action: {
                 viewModel.hasActiveEntitlement = false
                 viewModel.purchasedTier = .core
                 viewModel.activeProductIdentifier = nil
             })
-            settingsRow(label: "test weekly trial-ending notif (5s)", action: {
+            settingsRow(label: "Test Weekly Trial-Ending Notif (5s)", action: {
                 NotificationManager.shared.scheduleWeeklyTrialEndingReminderTest()
             })
-            settingsRow(label: "test annual trial reminders (5s, 10s)", action: {
+            settingsRow(label: "Test Annual Trial Reminders (5s, 10s)", action: {
                 NotificationManager.shared.scheduleTrialRemindersTest()
             })
-            settingsRow(label: "test re-engagement notifs (5s, 10s, 15s)", action: {
+            settingsRow(label: "Test Re-Engagement Notifs (5s, 10s, 15s)", action: {
                 NotificationManager.shared.scheduleReEngagementNotificationsTest()
             })
             Button {
@@ -336,10 +361,10 @@ struct SettingsView: View {
             } label: {
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("paywall currency preview")
+                        Text("Paywall Currency Preview")
                             .font(.system(size: 15, weight: .regular))
                             .foregroundColor(.white)
-                        Text(currencyPreview == "off" ? "using real prices" : "showing \(currencyPreview) prices")
+                        Text(currencyPreview == "off" ? "Using real prices" : "Showing \(currencyPreview) prices")
                             .font(.system(size: 11, weight: .regular))
                             .foregroundColor(Color(white: 0.35))
                     }
@@ -355,7 +380,7 @@ struct SettingsView: View {
             }
             .buttonStyle(PlainButtonStyle())
             HStack {
-                Text("hide debug UI")
+                Text("Hide Debug UI")
                     .font(.system(size: 15, weight: .regular))
                     .foregroundColor(.white)
                 Spacer()
@@ -367,7 +392,7 @@ struct SettingsView: View {
             .padding(.vertical, 14)
 
             HStack {
-                Text("conversational onboarding")
+                Text("Conversational Onboarding")
                     .font(.system(size: 15, weight: .regular))
                     .foregroundColor(.white)
                 Spacer()
@@ -380,10 +405,10 @@ struct SettingsView: View {
 
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("numeric intro animation")
+                    Text("Numeric Intro Animation")
                         .font(.system(size: 15, weight: .regular))
                         .foregroundColor(.white)
-                    Text(useNumericIntro ? "version B (probability/numbers)" : "version A (typewriter)")
+                    Text(useNumericIntro ? "Version B (probability/numbers)" : "Version A (typewriter)")
                         .font(.system(size: 11, weight: .regular))
                         .foregroundColor(Color(white: 0.35))
                 }

@@ -92,6 +92,8 @@ struct OnboardingViewV2: View {
     @State private var typingGeneration = 0
     @State private var paywallProPrice = "$99.99"
     @State private var paywallCorePrice = "$59.99"
+    @State private var paywallProMonthly = "$8.33"
+    @State private var paywallCoreMonthly = "$10.00"
     @State private var showOnboardingConfirmation = false
     @State private var onboardingConfirmationTier: AppTier = .core
     @State private var showDownsell = false
@@ -214,6 +216,12 @@ struct OnboardingViewV2: View {
     init(viewModel: AppViewModel, onComplete: @escaping () -> Void) {
         self.viewModel = viewModel
         self.onComplete = onComplete
+        if UserDefaults.standard.bool(forKey: "test_jumpToPaywallStep") {
+            UserDefaults.standard.removeObject(forKey: "test_jumpToPaywallStep")
+            _showBrandIntro = State(initialValue: false)
+            _step = State(initialValue: 19)
+            return
+        }
         let saved = UserDefaults.standard.object(forKey: Constants.onboardingProgressKey) as? Int ?? 0
         if saved > 0 {
             _showBrandIntro = State(initialValue: false)
@@ -1574,7 +1582,7 @@ struct OnboardingViewV2: View {
 
     private var paywallView: some View {
         return ZStack {
-            // Background image — fully independent layer, never moves
+            // Background image — kept exactly as is
             Image("onboarding_paywall_bg")
                 .resizable()
                 .scaledToFill()
@@ -1585,161 +1593,162 @@ struct OnboardingViewV2: View {
 
             Color.black.opacity(0.35).ignoresSafeArea()
 
-            // Content layer — fully independent from image
-            ZStack(alignment: .topLeading) {
-                Color.clear
-
-            // TOP SECTION — fixed at top
-            VStack(alignment: .leading, spacing: 0) {
-                Text("Your next decision\nchanges everything.")
-                    .font(.custom("HelveticaNeue-Bold", size: 26))
-                    .foregroundColor(.white)
-                    .lineSpacing(4)
-                    .padding(.top, 16)
-
-                Text("Spend less time stuck between\n\"what if\" and \"what now.\"")
-                    .font(.custom("Poppins-Regular", size: 14))
-                    .foregroundColor(Color(white: 0.45))
-                    .lineSpacing(4)
-                    .padding(.top, 10)
-
+            // Single adaptive content layer
+            VStack(spacing: 0) {
+                // TOP content
                 VStack(alignment: .leading, spacing: 0) {
-                    pwTimelineRow("checkmark", true,  "The thought",
-                                  "Bring the thing you can't stop thinking about.", false)
-                    pwTimelineRow("lightbulb.fill", false, "The verdict",
-                                  "Thousands of simulations. One clear answer.", false)
-                    pwTimelineRow("star.fill", false, "The outcome",
-                                  "You start moving with clarity.", true)
-                }
-                .padding(.top, 16)
-            }
-            .padding(.horizontal, 28)
-            .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("Your next decision\nchanges everything.")
+                        .font(.custom("HelveticaNeue-Bold", size: 26))
+                        .foregroundColor(.white)
+                        .lineSpacing(4)
+                        .padding(.top, 16)
 
-            // BOTTOM SECTION — fixed at bottom (button never moves)
-            VStack(alignment: .leading, spacing: 0) {
-                if selectedPlan == 0 {
-                    VStack(spacing: 4) {
-                        Text("7 Days for $0.00")
-                            .font(.custom("HelveticaNeue-Bold", size: 17))
-                            .foregroundColor(.white)
-                        Text("Then \(paywallProPrice)/year. Cancel anytime.")
-                            .font(.custom("Poppins-Regular", size: 13))
-                            .foregroundColor(Color(white: 0.42))
+                    Text("Spend less time stuck between\n\"what if\" and \"what now.\"")
+                        .font(.custom("Poppins-Regular", size: 14))
+                        .foregroundColor(Color(white: 0.45))
+                        .lineSpacing(4)
+                        .padding(.top, 10)
+
+                    VStack(alignment: .leading, spacing: 0) {
+                        pwTimelineRow("checkmark", true,  "The thought",
+                                      "Bring the thing you can't stop thinking about.", false)
+                        pwTimelineRow("lightbulb.fill", false, "The verdict",
+                                      "Thousands of simulations. One clear answer.", false)
+                        pwTimelineRow("star.fill", false, "The outcome",
+                                      "You start moving with clarity.", true)
                     }
-                    .frame(maxWidth: .infinity)
-                } else {
-                    VStack(spacing: 4) {
-                        Text("300 Thinks")
-                            .font(.custom("HelveticaNeue-Bold", size: 17))
-                            .foregroundColor(.white)
-                        Text("\(paywallCorePrice) for 6 months.")
-                            .font(.custom("Poppins-Regular", size: 13))
-                            .foregroundColor(Color(white: 0.42))
-                    }
-                    .frame(maxWidth: .infinity)
+                    .padding(.top, 16)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                VStack(spacing: 8) {
-                    pwPlanCard(0, "PRO — Unlimited", paywallProPrice, "7 Days Free",
-                               ["unlimited thinks", "deeper simulations", "pattern memory", "faster reasoning"],
-                               "billed annually")
-                    pwPlanCard(1, "CORE", paywallCorePrice, "300 Thinks",
-                               ["300 thinks", "full simulation access", "pattern tracking"],
-                               "billed every 6 months")
-                }
-                .padding(.top, 12)
+                Spacer(minLength: 16)
 
-                Button {
-                    Task {
-                        let productId: String = selectedPlan == 0 ? "com.brainla.bomb.pro.annual.v2" : "com.brainla.bomb.core.sixmonths.v2"
-                        let selectedTier: AppTier = selectedPlan == 0 ? .pro : .core
-                        print("DEBUG onboarding paywall buy: selectedPlan=\(selectedPlan), selectedTier=\(selectedTier)")
-                        if let package = viewModel.currentOffering?.availablePackages.first(where: {
-                            $0.storeProduct.productIdentifier == productId
-                        }) {
-                            let success = await viewModel.purchase(package: package)
-                            if success {
-                                await MainActor.run {
-                                    print("DEBUG onboarding confirmation tier = \(selectedTier)")
-                                    onboardingConfirmationTier = selectedTier
-                                    showOnboardingConfirmation = true
-                                }
-                            }
-                        } else {
-                            await MainActor.run {
-                                purchaseErrorMessage = "Unable to load subscription. Please try again."
-                                showPurchaseError = true
-                            }
+                // BOTTOM content
+                VStack(alignment: .leading, spacing: 0) {
+                    if selectedPlan == 0 {
+                        VStack(spacing: 4) {
+                            Text("7 Days for $0.00")
+                                .font(.custom("HelveticaNeue-Bold", size: 17))
+                                .foregroundColor(.white)
+                            Text("Then \(paywallProPrice)/year. Cancel anytime.")
+                                .font(.custom("Poppins-Regular", size: 13))
+                                .foregroundColor(Color(white: 0.42))
                         }
-                    }
-                } label: {
-                    Text(selectedPlan == 0 ? "Start my 7-day free trial" : "Get Core")
-                        .font(.custom("HelveticaNeue-Bold", size: 17))
-                        .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 17)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black, lineWidth: 1.5))
-                }
-                .buttonStyle(PlainButtonStyle())
-                .padding(.top, 12)
+                    } else {
+                        VStack(spacing: 4) {
+                            Text("300 Thinks")
+                                .font(.custom("HelveticaNeue-Bold", size: 17))
+                                .foregroundColor(.white)
+                            Text("\(paywallCorePrice) for 6 months.")
+                                .font(.custom("Poppins-Regular", size: 13))
+                                .foregroundColor(Color(white: 0.42))
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
 
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(Color(white: 0.36))
-                    Text(selectedPlan == 0 ? "7 days free. Cancel anytime." : "One-time payment. 300 thinks.")
-                        .font(.custom("Poppins-Regular", size: 12))
-                        .foregroundColor(Color(white: 0.36))
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 8)
+                    VStack(spacing: 8) {
+                        pwPlanCard(0, "PRO — Unlimited", "\(paywallProMonthly)/mo", "Billed annually at \(paywallProPrice)",
+                                   ["unlimited thinks", "deeper simulations", "pattern memory"],
+                                   "")
+                        pwPlanCard(1, "CORE", "\(paywallCoreMonthly)/mo", "Billed every 6 months at \(paywallCorePrice)",
+                                   ["300 thinks", "full simulation access", "pattern tracking"],
+                                   "")
+                    }
+                    .padding(.top, 12)
 
-                HStack(spacing: 18) {
-                    Button {
-                        docsTab = 0
-                        showDocs = true
-                    } label: { Text("Terms & Privacy").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4)) }
-                    .buttonStyle(PlainButtonStyle())
                     Button {
                         Task {
-                            let restored = await viewModel.restorePurchases()
-                            if restored {
-                                await MainActor.run {
-                                    onboardingConfirmationTier = viewModel.activeTier
-                                    showOnboardingConfirmation = true
+                            let productId: String = selectedPlan == 0 ? "com.brainla.bomb.pro.annual.v2" : "com.brainla.bomb.core.sixmonths.v2"
+                            let selectedTier: AppTier = selectedPlan == 0 ? .pro : .core
+                            print("DEBUG onboarding paywall buy: selectedPlan=\(selectedPlan), selectedTier=\(selectedTier)")
+                            if let package = viewModel.currentOffering?.availablePackages.first(where: {
+                                $0.storeProduct.productIdentifier == productId
+                            }) {
+                                let success = await viewModel.purchase(package: package)
+                                if success {
+                                    await MainActor.run {
+                                        print("DEBUG onboarding confirmation tier = \(selectedTier)")
+                                        onboardingConfirmationTier = selectedTier
+                                        showOnboardingConfirmation = true
+                                    }
                                 }
                             } else {
                                 await MainActor.run {
-                                    purchaseErrorMessage = "No active subscription found for this Apple ID."
+                                    purchaseErrorMessage = "Unable to load subscription. Please try again."
                                     showPurchaseError = true
                                 }
                             }
                         }
                     } label: {
-                        Text("Restore").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
+                        Text(selectedPlan == 0 ? "Start my 7-day free trial" : "Get Core")
+                            .font(.custom("HelveticaNeue-Bold", size: 17))
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 17)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black, lineWidth: 1.5))
                     }
                     .buttonStyle(PlainButtonStyle())
-                    Button {
-                        PostHogSDK.shared.capture("paywall_skipped")
-                        if viewModel.hasActiveEntitlement {
-                            advanceNoHistory()
-                        } else {
-                            showDownsell = true
+                    .padding(.top, 12)
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundColor(Color(white: 0.36))
+                        Text(selectedPlan == 0 ? "7 days free. Cancel anytime." : "One-time payment. 300 thinks.")
+                            .font(.custom("Poppins-Regular", size: 12))
+                            .foregroundColor(Color(white: 0.36))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
+
+                    HStack(spacing: 18) {
+                        Button {
+                            docsTab = 0
+                            showDocs = true
+                        } label: { Text("Terms & Privacy").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4)) }
+                        .buttonStyle(PlainButtonStyle())
+                        Button {
+                            Task {
+                                let restored = await viewModel.restorePurchases()
+                                if restored {
+                                    await MainActor.run {
+                                        onboardingConfirmationTier = viewModel.activeTier
+                                        showOnboardingConfirmation = true
+                                    }
+                                } else {
+                                    await MainActor.run {
+                                        purchaseErrorMessage = "No active subscription found for this Apple ID."
+                                        showPurchaseError = true
+                                    }
+                                }
+                            }
+                        } label: {
+                            Text("Restore").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
                         }
-                    } label: {
-                        Text("Skip for now").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
+                        .buttonStyle(PlainButtonStyle())
+                        Button {
+                            PostHogSDK.shared.capture("paywall_skipped")
+                            if viewModel.hasActiveEntitlement {
+                                advanceNoHistory()
+                            } else {
+                                showDownsell = true
+                            }
+                        } label: {
+                            Text("Skip for now").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 6)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 6)
-                .padding(.bottom, 100)
             }
             .padding(.horizontal, 28)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .padding(.bottom, 80)
+            .safeAreaInset(edge: .top) { Color.clear.frame(height: 0) }
+            .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 0) }
         }
         .onAppear {
             PostHogSDK.shared.capture("paywall_viewed")
@@ -1747,20 +1756,21 @@ struct OnboardingViewV2: View {
                 await viewModel.fetchOfferings()
                 if let pro = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual.v2" }) {
                     paywallProPrice = pro.storeProduct.localizedPriceString
+                    paywallProMonthly = pro.storeProduct.localizedPricePerMonth ?? paywallProMonthly
                 }
                 if let core = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths.v2" }) {
                     paywallCorePrice = core.storeProduct.localizedPriceString
+                    paywallCoreMonthly = core.storeProduct.localizedPricePerMonth ?? paywallCoreMonthly
                 }
                 #if DEBUG
                 switch UserDefaults.standard.string(forKey: "debug_currencyPreview") ?? "off" {
-                case "USD": paywallProPrice = "$99.99";      paywallCorePrice = "$59.99"
-                case "GBP": paywallProPrice = "£79.99";      paywallCorePrice = "£49.99"
-                case "SGD": paywallProPrice = "S$129.99";    paywallCorePrice = "S$79.99"
+                case "USD": paywallProPrice = "$99.99";      paywallCorePrice = "$59.99";   paywallProMonthly = "$8.33";    paywallCoreMonthly = "$10.00"
+                case "GBP": paywallProPrice = "£79.99";      paywallCorePrice = "£49.99";   paywallProMonthly = "£6.67";    paywallCoreMonthly = "£8.33"
+                case "SGD": paywallProPrice = "S$129.99";    paywallCorePrice = "S$79.99";  paywallProMonthly = "S$10.83";  paywallCoreMonthly = "S$13.33"
                 default: break
                 }
                 #endif
             }
-        }
         }
         .alert("Purchase Failed", isPresented: $showPurchaseError) {
             Button("OK", role: .cancel) {}
@@ -1791,18 +1801,18 @@ struct OnboardingViewV2: View {
         let sel = selectedPlan == idx
         return Button { selectedPlan = idx } label: {
             VStack(alignment: .leading, spacing: 0) {
-                HStack {
+                HStack(alignment: .firstTextBaseline) {
                     Text(title)
                         .font(.custom("HelveticaNeue", size: 15))
                         .foregroundColor(.white)
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(price).font(.custom("HelveticaNeue-Bold", size: 14)).foregroundColor(.white)
+                        Text(price).font(.custom("HelveticaNeue-Bold", size: 15)).foregroundColor(.white)
                         Text(badge).font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.45))
                     }
                 }
                 if sel && !features.isEmpty {
-                    Spacer().frame(height: 10)
+                    Spacer().frame(height: 2)
                     VStack(alignment: .leading, spacing: 5) {
                         ForEach(features, id: \.self) { feature in
                             HStack(spacing: 6) {
@@ -1857,10 +1867,11 @@ struct OnboardingViewV2: View {
                     .font(.custom("Poppins-Regular", size: 13))
                     .foregroundColor(Color(white: 0.42))
                     .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 6)
             .padding(.bottom, isLast ? 0 : 12)
-            Spacer()
         }
     }
 

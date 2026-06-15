@@ -16,60 +16,66 @@ struct PaywallView: View {
     @State private var proPrice: String = "$99.99"
     @State private var corePrice: String = "$59.99"
     @State private var weeklyPrice: String = "$5.99"
+    @State private var proMonthly: String = "$8.33"
+    @State private var coreMonthly: String = "$10.00"
+    @State private var weeklyDaily: String = "$0.85"
 
     private var paywallVideoURL: URL? {
         Bundle.main.url(forResource: "paywall_bg", withExtension: "mov")
     }
 
     var body: some View {
-        ZStack {
+        VStack(spacing: 0) {
+                HStack {
+                    Spacer()
+                    Button { onDismiss?(); dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundColor(Color(white: 0.4))
+                    }
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 14)
+                .offset(y: 26)
 
-            if let url = paywallVideoURL {
-                LoopingVideoView(url: url)
-                    .ignoresSafeArea()
-                    .scaleEffect(1.05)
-                Color.black.opacity(0.72).ignoresSafeArea()
-            } else {
-                Color(hex: "#0A0A0A").ignoresSafeArea()
-            }
-
-            VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("your brain.")
+                    Text("Your Brain.")
                         .font(.custom("HelveticaNeue", size: 42))
                         .foregroundColor(.white)
-                    Text("fully awake.")
+                    Text("Fully Awake.")
                         .font(.custom("HelveticaNeue", size: 42))
                         .foregroundColor(Color(white: 0.25))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24)
-                .padding(.top, 8)
-                .padding(.bottom, 20)
+                .padding(.top, 4)
+                .padding(.bottom, 16)
 
                 VStack(spacing: 0) {
                     paywallRow(icon: "infinity",
-                               title: "think without limits.",
-                               description: "whenever you need it. however often you need it.")
+                               title: "Think Without Limits.",
+                               description: "Whenever you need it. However often you need it.")
                     paywallDivider
                     paywallRow(icon: "sparkles",
-                               title: "pattern + archetype.",
-                               description: "your brain reveals itself. see exactly how you think and decide.")
+                               title: "Pattern + Archetype.",
+                               description: "See exactly how you think and decide.")
                     paywallDivider
                     paywallRow(icon: "bubble.left.fill",
-                               title: "chat about any think.",
-                               description: "the card was just the start. ask it everything.")
+                               title: "Chat About Any Think.",
+                               description: "The card was just the start. Ask it everything.")
                 }
                 .padding(.horizontal, 28)
-                .padding(.bottom, 24)
+                .padding(.bottom, 16)
 
-                VStack(spacing: 10) {
-                    paywallPlanCard(index: 2, productId: "com.brainla.bomb.pro.weekly", title: "WEEKLY", price: weeklyPrice, subtitle: "7 days free trial", detail: "cancel anytime", isProBadge: false)
-                    paywallPlanCard(index: 0, productId: "com.brainla.bomb.core.sixmonths.v2", title: "CORE", price: corePrice, subtitle: "300 thinks · 6 months", detail: "everything unlocked", isProBadge: false)
-                    paywallPlanCard(index: 1, productId: "com.brainla.bomb.pro.annual.v2", title: "PRO", price: proPrice, subtitle: "unlimited thinks", detail: "chat + full memory", isProBadge: true)
+                Spacer(minLength: 16)
+
+                VStack(spacing: 14) {
+                    paywallPlanCard(index: 2, productId: "com.brainla.bomb.pro.weekly", title: "WEEKLY", price: "\(weeklyDaily)/day", subtitle: "7 Days Free Trial", detail: "Cancel Anytime", isProBadge: false, priceCaption: "Billed weekly at \(weeklyPrice)")
+                    paywallPlanCard(index: 0, productId: "com.brainla.bomb.core.sixmonths.v2", title: "CORE", price: "\(coreMonthly)/mo", subtitle: "300 Thinks", detail: "Everything Unlocked", isProBadge: false, priceCaption: "Billed every 6 months at \(corePrice)")
+                    paywallPlanCard(index: 1, productId: "com.brainla.bomb.pro.annual.v2", title: "PRO", price: "\(proMonthly)/mo", subtitle: "Unlimited Thinks", detail: "Chat + Full Memory", isProBadge: true, priceCaption: "Billed annually at \(proPrice)")
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 24)
+                .padding(.bottom, 16)
 
                 Button(action: {
                     Task {
@@ -102,9 +108,9 @@ struct PaywallView: View {
                 }) {
                     Text({
                         switch selectedPlan {
-                        case 1: return "start my 7-day free trial"
-                        case 2: return "try weekly · 7 days free"
-                        default: return "get Core"
+                        case 1: return "Start My 7-Day Free Trial"
+                        case 2: return "Try Weekly · 7 Days Free"
+                        default: return "Get Core"
                         }
                     }())
                         .font(.custom("HelveticaNeue", size: 17))
@@ -117,6 +123,23 @@ struct PaywallView: View {
                 .disabled(viewModel.isLoadingPurchase)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 12)
+
+                if selectedPlan == 1 {
+                    Text("7 Days Free, Then \(proPrice)/Year. Cancel Anytime.")
+                        .font(.custom("HelveticaNeue", size: 13))
+                        .foregroundColor(Color(white: 0.4))
+                        .padding(.bottom, 8)
+                } else if selectedPlan == 2 {
+                    Text("7 Days Free, Then \(weeklyPrice)/Week. Cancel Anytime.")
+                        .font(.custom("HelveticaNeue", size: 13))
+                        .foregroundColor(Color(white: 0.4))
+                        .padding(.bottom, 8)
+                } else {
+                    Text("300 Thinks. \(corePrice) For 6 Months. Cancel Anytime.")
+                        .font(.custom("HelveticaNeue", size: 13))
+                        .foregroundColor(Color(white: 0.4))
+                        .padding(.bottom, 8)
+                }
 
                 HStack(spacing: 16) {
                     Button(action: {
@@ -135,7 +158,7 @@ struct PaywallView: View {
                             }
                         }
                     }) {
-                        Text("restore purchase")
+                        Text("Restore Purchase")
                             .font(.custom("HelveticaNeue", size: 12))
                             .foregroundColor(Color(white: 0.3))
                     }
@@ -144,53 +167,35 @@ struct PaywallView: View {
                         docsTab = 1
                         showDocs = true
                     } label: {
-                        Text("privacy")
+                        Text("Privacy")
                             .font(.custom("HelveticaNeue", size: 12))
                             .foregroundColor(Color(white: 0.3))
                     }
                     Text("·").foregroundColor(Color(white: 0.15))
                     Button {
-                        docsTab = 0
-                        showDocs = true
+                        onDismiss?(); dismiss()
                     } label: {
-                        Text("terms")
+                        Text("No Thanks")
                             .font(.custom("HelveticaNeue", size: 12))
                             .foregroundColor(Color(white: 0.3))
                     }
                 }
                 .padding(.bottom, 8)
-
-                if selectedPlan == 1 {
-                    Text("7 days free, then \(proPrice)/year. Cancel anytime.")
-                        .font(.custom("HelveticaNeue", size: 13))
-                        .foregroundColor(Color(white: 0.4))
-                        .padding(.bottom, 32)
-                } else if selectedPlan == 2 {
-                    Text("7 days free, then \(weeklyPrice)/week. Cancel anytime.")
-                        .font(.custom("HelveticaNeue", size: 13))
-                        .foregroundColor(Color(white: 0.4))
-                        .padding(.bottom, 32)
+            }
+            .padding(.bottom, 12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                if let url = paywallVideoURL {
+                    ZStack {
+                        LoopingVideoView(url: url)
+                            .scaleEffect(1.05)
+                        Color.black.opacity(0.72)
+                    }
+                    .ignoresSafeArea()
                 } else {
-                    Text("300 thinks. \(corePrice) for 6 months. Cancel anytime.")
-                        .font(.custom("HelveticaNeue", size: 13))
-                        .foregroundColor(Color(white: 0.4))
-                        .padding(.bottom, 32)
+                    Color(hex: "#0A0A0A").ignoresSafeArea()
                 }
             }
-        }
-        .safeAreaInset(edge: .top) {
-            HStack {
-                Spacer()
-                Button { onDismiss?(); dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(Color(white: 0.4))
-                }
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 60)
-            .padding(.bottom, -40)
-        }
         .offset(y: dragOffset)
         .gesture(
             DragGesture()
@@ -232,18 +237,21 @@ struct PaywallView: View {
                 await viewModel.fetchOfferings()
                 if let pro = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.annual.v2" }) {
                     proPrice = pro.storeProduct.localizedPriceString
+                    proMonthly = pro.storeProduct.localizedPricePerMonth ?? proMonthly
                 }
                 if let core = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.core.sixmonths.v2" }) {
                     corePrice = core.storeProduct.localizedPriceString
+                    coreMonthly = core.storeProduct.localizedPricePerMonth ?? coreMonthly
                 }
                 if let weekly = viewModel.currentOffering?.availablePackages.first(where: { $0.storeProduct.productIdentifier == "com.brainla.bomb.pro.weekly" }) {
                     weeklyPrice = weekly.storeProduct.localizedPriceString
+                    weeklyDaily = weekly.storeProduct.localizedPricePerDay ?? weeklyDaily
                 }
                 #if DEBUG
                 switch UserDefaults.standard.string(forKey: "debug_currencyPreview") ?? "off" {
-                case "USD": proPrice = "$99.99";      corePrice = "$59.99";    weeklyPrice = "$5.99"
-                case "GBP": proPrice = "£79.99";      corePrice = "£49.99";    weeklyPrice = "£4.99"
-                case "SGD": proPrice = "S$129.99";    corePrice = "S$79.99";   weeklyPrice = "S$7.99"
+                case "USD": proPrice = "$99.99";      corePrice = "$59.99";    weeklyPrice = "$5.99";   proMonthly = "$8.33";    coreMonthly = "$10.00";   weeklyDaily = "$0.85"
+                case "GBP": proPrice = "£79.99";      corePrice = "£49.99";    weeklyPrice = "£4.99";   proMonthly = "£6.67";    coreMonthly = "£8.33";    weeklyDaily = "£0.71"
+                case "SGD": proPrice = "S$129.99";    corePrice = "S$79.99";   weeklyPrice = "S$7.99";  proMonthly = "S$10.83";  coreMonthly = "S$13.33";  weeklyDaily = "S$1.14"
                 default: break
                 }
                 #endif
@@ -264,7 +272,7 @@ struct PaywallView: View {
         }
     }
 
-    private func paywallPlanCard(index: Int, productId: String, title: String, price: String, subtitle: String, detail: String, isProBadge: Bool) -> some View {
+    private func paywallPlanCard(index: Int, productId: String, title: String, price: String, subtitle: String, detail: String, isProBadge: Bool, priceCaption: String? = nil) -> some View {
         let isSelected = selectedPlan == index
         let isCurrent = viewModel.hasActiveEntitlement && viewModel.activeProductIdentifier == productId
         return Button {
@@ -294,9 +302,16 @@ struct PaywallView: View {
                         .foregroundColor(Color(white: 0.4))
                 }
                 Spacer()
-                Text(price)
-                    .font(.custom("HelveticaNeue", size: 14))
-                    .foregroundColor(.white)
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text(price)
+                        .font(.custom("HelveticaNeue", size: 14))
+                        .foregroundColor(.white)
+                    if let priceCaption {
+                        Text(priceCaption)
+                            .font(.custom("HelveticaNeue", size: 12))
+                            .foregroundColor(Color(white: 0.4))
+                    }
+                }
             }
             .padding(16)
             .background(isSelected ? Color(white: 0.08) : Color(white: 0.05))
@@ -343,7 +358,7 @@ struct PaywallView: View {
             }
             Spacer()
         }
-        .padding(.vertical, 16)
+        .padding(.vertical, 12)
     }
 
     private var paywallDivider: some View {

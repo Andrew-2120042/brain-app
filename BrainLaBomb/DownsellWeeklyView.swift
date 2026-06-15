@@ -7,6 +7,7 @@ struct DownsellWeeklyView: View {
     var onDismiss: () -> Void
 
     @State private var weeklyPrice: String = "$5.99"
+    @State private var weeklyDaily: String = "$0.85"
     @State private var isPurchasing = false
     @State private var showPurchaseError = false
     @State private var purchaseErrorMessage = ""
@@ -41,7 +42,7 @@ struct DownsellWeeklyView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24)
-                .padding(.top, 60)
+                .padding(.top, 44)
 
                 Spacer()
 
@@ -158,12 +159,13 @@ struct DownsellWeeklyView: View {
                     $0.storeProduct.productIdentifier == Self.weeklyProductId
                 }) {
                     weeklyPrice = weekly.storeProduct.localizedPriceString
+                    weeklyDaily = weekly.storeProduct.localizedPricePerDay ?? weeklyDaily
                 }
                 #if DEBUG
                 switch UserDefaults.standard.string(forKey: "debug_currencyPreview") ?? "off" {
-                case "USD": weeklyPrice = "$5.99"
-                case "GBP": weeklyPrice = "£4.99"
-                case "SGD": weeklyPrice = "S$7.99"
+                case "USD": weeklyPrice = "$5.99";   weeklyDaily = "$0.85"
+                case "GBP": weeklyPrice = "£4.99";   weeklyDaily = "£0.71"
+                case "SGD": weeklyPrice = "S$7.99";  weeklyDaily = "S$1.14"
                 default: break
                 }
                 #endif
@@ -202,14 +204,19 @@ struct DownsellWeeklyView: View {
                         Text("Weekly Plan")
                             .font(.custom("HelveticaNeue-Bold", size: 18))
                             .foregroundColor(.white)
-                        Text("Billed Weekly  ·  Cancel Anytime")
+                        Text("Cancel Anytime")
                             .font(.custom("HelveticaNeue", size: 13))
                             .foregroundColor(Color(white: 0.45))
                     }
                     Spacer()
-                    Text("\(weeklyPrice)")
-                        .font(.custom("HelveticaNeue-Bold", size: 18))
-                        .foregroundColor(.white)
+                    VStack(alignment: .trailing, spacing: 3) {
+                        Text("\(weeklyDaily)/day")
+                            .font(.custom("HelveticaNeue-Bold", size: 18))
+                            .foregroundColor(.white)
+                        Text("Billed weekly at \(weeklyPrice)")
+                            .font(.custom("HelveticaNeue", size: 12))
+                            .foregroundColor(Color(white: 0.45))
+                    }
                 }
 
                 Rectangle().fill(Color(white: 0.18)).frame(height: 1)
