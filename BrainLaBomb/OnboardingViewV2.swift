@@ -1650,7 +1650,7 @@ struct OnboardingViewV2: View {
                     VStack(spacing: 8) {
                         pwPlanCard(0, "PRO — Unlimited", "\(paywallProMonthly)/mo", "Billed annually at \(paywallProPrice)",
                                    ["unlimited thinks", "deeper simulations", "pattern memory"],
-                                   "")
+                                   "", true)
                         pwPlanCard(1, "CORE", "\(paywallCoreMonthly)/mo", "Billed every 6 months at \(paywallCorePrice)",
                                    ["300 thinks", "full simulation access", "pattern tracking"],
                                    "")
@@ -1688,7 +1688,6 @@ struct OnboardingViewV2: View {
                             .padding(.vertical, 17)
                             .background(Color.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
-                            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.black, lineWidth: 1.5))
                     }
                     .buttonStyle(PlainButtonStyle())
                     .padding(.top, 12)
@@ -1704,12 +1703,7 @@ struct OnboardingViewV2: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, 8)
 
-                    HStack(spacing: 18) {
-                        Button {
-                            docsTab = 0
-                            showDocs = true
-                        } label: { Text("Terms & Privacy").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4)) }
-                        .buttonStyle(PlainButtonStyle())
+                    HStack(spacing: 32) {
                         Button {
                             Task {
                                 let restored = await viewModel.restorePurchases()
@@ -1730,14 +1724,19 @@ struct OnboardingViewV2: View {
                         }
                         .buttonStyle(PlainButtonStyle())
                         Button {
-                            PostHogSDK.shared.capture("paywall_skipped")
-                            if viewModel.hasActiveEntitlement {
-                                advanceNoHistory()
-                            } else {
-                                showDownsell = true
+                            if let url = URL(string: "https://creative-sailfish-dc6.notion.site/privacy-policy-3647cd351f5b807b9021d48d42a71a0b?source=copy_link") {
+                                UIApplication.shared.open(url)
                             }
                         } label: {
-                            Text("Skip for now").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
+                            Text("Privacy").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                        Button {
+                            if let url = URL(string: "https://creative-sailfish-dc6.notion.site/Terms-and-conditions-3647cd351f5b8000b482d1062d00f0ad?source=copy_link") {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Text("Terms").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
@@ -1749,6 +1748,22 @@ struct OnboardingViewV2: View {
             .padding(.bottom, 80)
             .safeAreaInset(edge: .top) { Color.clear.frame(height: 0) }
             .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 0) }
+            .overlay(alignment: .topTrailing) {
+                Button {
+                    PostHogSDK.shared.capture("paywall_skipped")
+                    if viewModel.hasActiveEntitlement {
+                        advanceNoHistory()
+                    } else {
+                        showDownsell = true
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundColor(Color(white: 0.5))
+                }
+                .padding(.trailing, 24)
+                .padding(.top, 8)
+            }
         }
         .onAppear {
             PostHogSDK.shared.capture("paywall_viewed")
@@ -1797,7 +1812,7 @@ struct OnboardingViewV2: View {
         )
     }
 
-    private func pwPlanCard(_ idx: Int, _ title: String, _ price: String, _ badge: String, _ features: [String] = [], _ billingLine: String = "") -> some View {
+    private func pwPlanCard(_ idx: Int, _ title: String, _ price: String, _ badge: String, _ features: [String] = [], _ billingLine: String = "", _ mostPopular: Bool = false) -> some View {
         let sel = selectedPlan == idx
         return Button { selectedPlan = idx } label: {
             VStack(alignment: .leading, spacing: 0) {
@@ -1807,7 +1822,7 @@ struct OnboardingViewV2: View {
                         .foregroundColor(.white)
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
-                        Text(price).font(.custom("HelveticaNeue-Bold", size: 15)).foregroundColor(.white)
+                        Text(price).font(.custom("HelveticaNeue-Bold", size: 16)).foregroundColor(.white)
                         Text(badge).font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.45))
                     }
                 }
@@ -1839,6 +1854,24 @@ struct OnboardingViewV2: View {
             .background(Color(white: sel ? 0.12 : 0.07))
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(sel ? Color.white : Color(white: 0.15), lineWidth: sel ? 1.5 : 1))
+            .overlay(alignment: .bottomTrailing) {
+                if mostPopular && sel {
+                    HStack(spacing: 3) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 8, weight: .bold))
+                        Text("MOST POPULAR")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(0.5)
+                    }
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.white)
+                    .clipShape(Capsule())
+                    .padding(.trailing, 12)
+                    .padding(.bottom, 10)
+                }
+            }
             .animation(.easeInOut(duration: 0.2), value: sel)
         }
         .buttonStyle(PlainButtonStyle())

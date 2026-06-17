@@ -91,15 +91,6 @@ struct DownsellWeeklyView: View {
 
                 HStack(spacing: 16) {
                     Button {
-                        PostHogSDK.shared.capture("downsell_no_thanks")
-                        onDismiss()
-                    } label: {
-                        Text("No thanks")
-                            .font(.custom("HelveticaNeue", size: 13))
-                            .foregroundColor(Color(white: 0.4))
-                    }
-                    Text("·").foregroundColor(Color(white: 0.18))
-                    Button {
                         Task {
                             let restored = await viewModel.restorePurchases()
                             if restored {
@@ -116,6 +107,26 @@ struct DownsellWeeklyView: View {
                         }
                     } label: {
                         Text("Restore")
+                            .font(.custom("HelveticaNeue", size: 13))
+                            .foregroundColor(Color(white: 0.4))
+                    }
+                    Text("·").foregroundColor(Color(white: 0.18))
+                    Button {
+                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/privacy-policy-3647cd351f5b807b9021d48d42a71a0b?source=copy_link") {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        Text("Privacy")
+                            .font(.custom("HelveticaNeue", size: 13))
+                            .foregroundColor(Color(white: 0.4))
+                    }
+                    Text("·").foregroundColor(Color(white: 0.18))
+                    Button {
+                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/Terms-and-conditions-3647cd351f5b8000b482d1062d00f0ad?source=copy_link") {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        Text("Terms")
                             .font(.custom("HelveticaNeue", size: 13))
                             .foregroundColor(Color(white: 0.4))
                     }
@@ -228,11 +239,20 @@ struct DownsellWeeklyView: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity)
-            .background(Color(white: 0.08))
+            .background(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: 16,
+                    bottomLeadingRadius: 0,
+                    bottomTrailingRadius: 0,
+                    topTrailingRadius: 16
+                )
+                .fill(Color(white: 0.08))
+            )
         }
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
+            RoundedRectangle(cornerRadius: 18)
                 .stroke(Color.white, lineWidth: 1)
         )
     }

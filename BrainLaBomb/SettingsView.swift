@@ -30,8 +30,6 @@ struct SettingsView: View {
                         divider
                         helpSection
                         divider
-                        testingSection
-                        divider
                         dangerSection
                         #if DEBUG
                         divider
@@ -257,29 +255,6 @@ struct SettingsView: View {
             }
 
             Text("Stuck or something not working? We'll get back to you.")
-                .font(.custom("Poppins-Regular", size: 12))
-                .foregroundColor(Color(white: 0.3))
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 24)
-                .padding(.bottom, 14)
-        }
-    }
-
-    // TEMP — visible in release for TestFlight UI testing. Remove before App Store submission.
-    private var testingSection: some View {
-        VStack(spacing: 0) {
-            sectionHeader("testing")
-            settingsRow(label: "Show In-App Paywall", action: {
-                showPaywall = true
-            })
-            settingsRow(label: "Show Onboarding Paywall", action: {
-                UserDefaults.standard.set(true, forKey: "test_jumpToPaywallStep")
-                UserDefaults.standard.set(false, forKey: "hasCompletedOnboarding")
-                UserDefaults.standard.removeObject(forKey: Constants.onboardingProgressKey)
-                NotificationCenter.default.post(name: .replayOnboarding, object: nil)
-                dismiss()
-            })
-            Text("Temporary — remove before release.")
                 .font(.custom("Poppins-Regular", size: 12))
                 .foregroundColor(Color(white: 0.3))
                 .frame(maxWidth: .infinity, alignment: .leading)

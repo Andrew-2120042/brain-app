@@ -164,8 +164,9 @@ struct PaywallView: View {
                     }
                     Text("·").foregroundColor(Color(white: 0.15))
                     Button {
-                        docsTab = 1
-                        showDocs = true
+                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/privacy-policy-3647cd351f5b807b9021d48d42a71a0b?source=copy_link") {
+                            UIApplication.shared.open(url)
+                        }
                     } label: {
                         Text("Privacy")
                             .font(.custom("HelveticaNeue", size: 12))
@@ -173,9 +174,11 @@ struct PaywallView: View {
                     }
                     Text("·").foregroundColor(Color(white: 0.15))
                     Button {
-                        onDismiss?(); dismiss()
+                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/Terms-and-conditions-3647cd351f5b8000b482d1062d00f0ad?source=copy_link") {
+                            UIApplication.shared.open(url)
+                        }
                     } label: {
-                        Text("No Thanks")
+                        Text("Terms")
                             .font(.custom("HelveticaNeue", size: 12))
                             .foregroundColor(Color(white: 0.3))
                     }
@@ -287,11 +290,13 @@ struct PaywallView: View {
                         if isProBadge {
                             Text("7 DAYS FREE")
                                 .font(.system(size: 10, weight: .bold))
-                                .foregroundColor(.black)
+                                .foregroundColor(.white)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 3)
-                                .background(Color.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(Color.white, lineWidth: 1)
+                                )
                         }
                     }
                     Text(subtitle)
@@ -332,6 +337,21 @@ struct PaywallView: View {
                         .clipShape(Capsule())
                         .padding(.trailing, 12)
                         .padding(.bottom, 10)
+                } else if isProBadge {
+                    HStack(spacing: 3) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 8, weight: .bold))
+                        Text("MOST POPULAR")
+                            .font(.system(size: 9, weight: .bold))
+                            .tracking(0.5)
+                    }
+                    .foregroundColor(.black)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.white)
+                    .clipShape(Capsule())
+                    .padding(.trailing, 12)
+                    .padding(.bottom, 10)
                 }
             }
         }
