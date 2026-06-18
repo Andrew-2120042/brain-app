@@ -66,6 +66,7 @@ struct OnboardingViewV2: View {
     @State private var customAnswer = ""
     @State private var step10ShowTextField = false
     @State private var patternRevealPhase: Int = 0
+    @State private var patternRevealDismissOpacity: Double = 1
     @State private var patternRevealContent: String = ""
     @State private var patternRevealLoaded: Bool = false
     @State private var patternRevealFailed: Bool = false
@@ -108,7 +109,9 @@ struct OnboardingViewV2: View {
 
     @State private var blackPhase: Int = 0
     @State private var badNewsPhase: Int = 0
+    @State private var badNewsDismissOpacity: Double = 1
     @State private var goodNewsPhase: Int = 0
+    @State private var goodNewsDismissOpacity: Double = 1
     @State private var rollingPhrase: Int = 0
     @State private var goodNewsRolling = false
     @State private var badNewsQuotePhrase: Int = 0
@@ -1201,7 +1204,7 @@ struct OnboardingViewV2: View {
                 Spacer()
 
                 Button {
-                    withAnimation(.easeOut(duration: 0.3)) { patternRevealPhase = 0 }
+                    withAnimation(.easeOut(duration: 0.3)) { patternRevealDismissOpacity = 0 }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { advanceNoHistory() }
                 } label: {
                     Text("Continue")
@@ -1241,6 +1244,7 @@ struct OnboardingViewV2: View {
                 Spacer()
             }
         }
+        .opacity(patternRevealDismissOpacity)
         .contentShape(Rectangle())
         .onTapGesture {
             guard patternRevealPhase < 5 else { return }
@@ -1255,6 +1259,7 @@ struct OnboardingViewV2: View {
         }
         .onAppear {
             patternRevealPhase = 0
+            patternRevealDismissOpacity = 1
             patternRevealContent = ""
             patternRevealLoaded = false
             patternRevealFailed = false
@@ -2011,7 +2016,7 @@ struct OnboardingViewV2: View {
                     .opacity(badNewsPhase >= 7 ? 1 : 0)
                 Button {
                     badNewsQuoteCycling = false
-                    withAnimation(.easeInOut(duration: 0.4)) { badNewsPhase = 0 }
+                    withAnimation(.easeInOut(duration: 0.4)) { badNewsDismissOpacity = 0 }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { advanceNoHistory() }
                 } label: {
                     Text("Continue")
@@ -2039,6 +2044,7 @@ struct OnboardingViewV2: View {
                 Spacer()
             }
         }
+        .opacity(badNewsDismissOpacity)
         .contentShape(Rectangle())
         .onTapGesture {
             guard badNewsPhase < 7 else { return }
@@ -2051,6 +2057,7 @@ struct OnboardingViewV2: View {
         }
         .onAppear {
             badNewsPhase = 0
+            badNewsDismissOpacity = 1
             badNewsQuotePhrase = 0
             displayedMomentsNumber = "000,000"
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
@@ -2166,7 +2173,7 @@ struct OnboardingViewV2: View {
                     Spacer()
                     Button {
                         goodNewsRolling = false
-                        withAnimation(.easeInOut(duration: 0.4)) { goodNewsPhase = 0 }
+                        withAnimation(.easeInOut(duration: 0.4)) { goodNewsDismissOpacity = 0 }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { advanceNoHistory() }
                     } label: {
                         Text("Unlock your brain")
@@ -2226,7 +2233,7 @@ struct OnboardingViewV2: View {
                     Spacer()
                     Button {
                         goodNewsRolling = false
-                        withAnimation(.easeInOut(duration: 0.4)) { goodNewsPhase = 0 }
+                        withAnimation(.easeInOut(duration: 0.4)) { goodNewsDismissOpacity = 0 }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { advanceNoHistory() }
                     } label: {
                         Text("Unlock your brain")
@@ -2254,6 +2261,7 @@ struct OnboardingViewV2: View {
                 Spacer()
             }
         }
+        .opacity(goodNewsDismissOpacity)
         .contentShape(Rectangle())
         .onTapGesture {
             guard goodNewsPhase < 5 else { return }
@@ -2265,6 +2273,7 @@ struct OnboardingViewV2: View {
         }
         .onAppear {
             goodNewsPhase = 0
+            goodNewsDismissOpacity = 1
             rollingPhrase = 0
             goodNewsRolling = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
@@ -2669,7 +2678,7 @@ struct OnboardingViewV2: View {
                 onComplete()
                 return
             }
-            step += 1
+            withAnimation(.easeInOut(duration: 0.4)) { step += 1 }
             UserDefaults.standard.set(step, forKey: Constants.onboardingProgressKey)
             PostHogSDK.shared.capture("onboarding_step_viewed", properties: [
                 "step": step,
