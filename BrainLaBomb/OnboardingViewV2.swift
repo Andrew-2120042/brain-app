@@ -1580,6 +1580,8 @@ struct OnboardingViewV2: View {
 
     // MARK: Step 19 — paywall
 
+    private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
+
     private var paywallView: some View {
         return ZStack {
             // Background image — kept exactly as is
@@ -1621,7 +1623,7 @@ struct OnboardingViewV2: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer(minLength: 16)
+                Spacer(minLength: 16).frame(maxHeight: isPad ? 384 : .infinity)
 
                 // BOTTOM content
                 VStack(alignment: .leading, spacing: 0) {
@@ -1745,6 +1747,7 @@ struct OnboardingViewV2: View {
                 }
             }
             .padding(.horizontal, 28)
+            .padding(.top, isPad ? 40 : 0)
             .padding(.bottom, 80)
             .safeAreaInset(edge: .top) { Color.clear.frame(height: 0) }
             .safeAreaInset(edge: .bottom) { Color.clear.frame(height: 0) }
@@ -1764,6 +1767,7 @@ struct OnboardingViewV2: View {
                 .padding(.trailing, 24)
                 .padding(.top, 8)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .onAppear {
             PostHogSDK.shared.capture("paywall_viewed")
