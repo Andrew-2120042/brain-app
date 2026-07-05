@@ -221,12 +221,12 @@ struct DownsellWeeklyView: View {
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 3) {
-                        Text("\(weeklyDaily)/day")
+                        Text("\(weeklyPrice)/week")
                             .font(.custom("HelveticaNeue-Bold", size: 18))
                             .foregroundColor(.white)
-                        Text("Billed weekly at \(weeklyPrice)")
-                            .font(.custom("HelveticaNeue", size: 12))
-                            .foregroundColor(Color(white: 0.45))
+                        Text("That's \(weeklyDaily)/day")
+                            .font(.custom("HelveticaNeue", size: 11))
+                            .foregroundColor(Color(white: 0.55))
                     }
                 }
 

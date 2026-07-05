@@ -72,6 +72,12 @@ struct ChatView: View {
     let existingMessages: [ChatBubble]
     let onMessagesUpdated: ([ChatBubble]) -> Void
     var onNewThink: (() -> Void)? = nil
+    // Onboarding only: show a "Next →" affordance instead of the close X.
+    // Defaults false so the in-app chat keeps its X exactly as before.
+    var showNextInsteadOfClose: Bool = false
+    // Onboarding only: when set, the close/next button calls this instead of
+    // the environment dismiss (so the chat can be presented as a fade overlay).
+    var onClose: (() -> Void)? = nil
 
     @Environment(\.dismiss) private var dismiss
     @State private var messages: [ChatBubble] = []
@@ -182,13 +188,23 @@ struct ChatView: View {
         ZStack {
             HStack {
                 Spacer()
-                Button(action: { dismiss() }) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(Color(hex: "#666666"))
-                        .frame(width: 44, height: 44)
+                Button(action: { if let onClose { onClose() } else { dismiss() } }) {
+                    if showNextInsteadOfClose {
+                        Text("Next →")
+                            .font(.custom("HelveticaNeue", size: 15))
+                            .foregroundColor(.black)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 9)
+                            .background(Color.white)
+                            .clipShape(Capsule())
+                    } else {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundColor(Color(hex: "#666666"))
+                            .frame(width: 44, height: 44)
+                    }
                 }
-                .padding(.trailing, 4)
+                .padding(.trailing, showNextInsteadOfClose ? 12 : 4)
             }
         }
         .frame(height: 44)

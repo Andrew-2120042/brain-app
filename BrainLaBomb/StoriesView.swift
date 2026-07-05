@@ -892,7 +892,7 @@ struct StoriesView: View {
             Text(viewModel.thinkCountForPattern >= 5
                 ? "your pattern is being analyzed…"
                 : "\(max(0, 5 - viewModel.thinkCountForPattern)) more thinks until your pattern emerges.")
-                .font(.custom("HelveticaNeue", size: 12))
+                .font(.custom("HelveticaNeue", size: 16))
                 .foregroundColor(Color(white: 0.25))
                 .padding(.top, 8)
         }

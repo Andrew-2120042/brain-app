@@ -1,6 +1,7 @@
 import SwiftUI
 import UserNotifications
 import PostHog
+import StoreKit
 
 // MARK: - OnboardingViewV2
 // One unified space. Every thought types in at the same anchor.
@@ -106,6 +107,7 @@ struct OnboardingViewV2: View {
     @State private var numericParticles: [NumericIntroParticle] = []
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     @State private var blackPhase: Int = 0
     @State private var badNewsPhase: Int = 0
@@ -122,6 +124,42 @@ struct OnboardingViewV2: View {
     @State private var nudgePhase: Int = 0
     @State private var featuresPhase: Int = 0
     @State private var youreReadyPhase: Int = 0
+
+    // Step 17 — demo think (live verdict card)
+    @State private var demoResult: DecisionResult? = nil
+    @State private var demoCardOffset: CGFloat = 0
+    @State private var demoContinueVisible: Bool = false
+    @State private var demoLayoutIndex: Int = 0
+    @State private var demoThinkID: UUID = UUID()
+    @State private var demoCardAngle: Double = 0
+    @State private var demoTiltX: Double = 0
+    @State private var demoDragBase: Double = 0
+    @State private var demoDragStarted: Bool = false
+    @State private var demoBackScrolling: Bool = false
+    @State private var demoInput: String = ""
+    @State private var demoInputVisible: Bool = true
+    @State private var demoThinking: Bool = false
+    @State private var demoFallback: Bool = false
+    @State private var demoResolved: Bool = false
+    @State private var demoFollowUpQ: String = ""
+    @State private var demoShowFollowUp: Bool = false
+    @State private var demoShowIntro: Bool = true
+    @State private var demoIntroPhase: Int = 0
+    @State private var demoPostActive: Bool = false
+    @State private var demoPostPhase: Int = 0
+    @State private var demoPostMessage: Int = 1
+    @State private var demoBeatTappable: Bool = false
+    @State private var demoTailoredActive: Bool = false
+    @State private var demoTailoredPhase: Int = 0
+    @State private var demoReviewActive: Bool = false
+    @State private var demoReviewPhase: Int = 0
+    @State private var demoReviewAdvanced: Bool = false
+    @State private var demoThinkCompleted: Bool = false
+    @State private var demoShowChat: Bool = false
+    @State private var demoDebugCard: Bool = false
+    @State private var demoDebugChat: Bool = false
+    @State private var demoDebugReview: Bool = false
+    @FocusState private var demoInputFocused: Bool
 
     private let anchorTexts = [
         "You already know\nwhat you should do.",                            // 0
@@ -141,7 +179,7 @@ struct OnboardingViewV2: View {
         "",                                                                 // 14 full-screen bad news
         "",                                                                 // 15 full-screen good news
         "",                                                                 // 16 full-screen how we help
-        "Your brain\nis calibrated.",                                       // 17
+        "",                                                                 // 17 full-screen demo think
         "",                                                                 // 18 full-screen features/value
         "",                                                                 // 19 full-screen paywall
         "",                                                                 // 20 full-screen nudge/notifications
@@ -173,7 +211,7 @@ struct OnboardingViewV2: View {
         ["Still fresh. The noise hasn't peaked yet.",
          "Long enough that it's starting to feel permanent.\nIt isn't.",
          "Months of carrying something\nthat deserves an answer.",
-         "That's not indecision.\nThat's a decision that's been waiting\nlonger than it should have."],
+         "That's not indecision.\nThat's a decision That's been waiting\nlonger than it should have."],
         // Step 10 — where are you
         ["Both options feel right\nbecause you haven't run them forward yet.",
          "Knowing and doing are separated\nby exactly one thing. Trust.",
@@ -202,7 +240,7 @@ struct OnboardingViewV2: View {
         ["Fear of being wrong",
          "Fear of what others will think",
          "Fear of commitment",
-         "I don't know — that's the problem"],
+         "I don't know — That's the problem"],
         // Step 9
         ["A few days",
          "A few weeks",
@@ -282,11 +320,17 @@ struct OnboardingViewV2: View {
                 }
 
                 // ── Full-screen special steps ────────────────────────────────
+                // Persistent black underlay prevents Q&A content showing through
+                // during opacity transitions between special screens
+                if step >= 12 && step <= 21 {
+                    Color.black.ignoresSafeArea().zIndex(9)
+                }
                 if step == 12 { blackTransitionView.transition(.opacity).zIndex(10) }
                 if step == 13 { patternRevealView.transition(.opacity).zIndex(10) }
                 if step == 14 { badNewsView.transition(.opacity).zIndex(10) }
                 if step == 15 { goodNewsView.transition(.opacity).zIndex(10) }
                 if step == 16 { howWeHelpView.transition(.opacity).zIndex(10) }
+                if step == 17 { demoThinkView.transition(.opacity).zIndex(10) }
                 if step == 18 { featuresView.transition(.opacity).zIndex(10) }
                 if step == 19 { paywallView.transition(.opacity).zIndex(10) }
                 if step == 20 { nudgeView.transition(.opacity).zIndex(10) }
@@ -405,9 +449,11 @@ struct OnboardingViewV2: View {
                 Button("→ home") { onComplete() }
                 Button("→ paywall") { showBrandIntro = false; step = 19 }
                 Button("→ pattern reveal") { showBrandIntro = false; step = 13 }
-                Button("→ bad news") { showBrandIntro = false; step = 14 }
-                Button("→ good news") { showBrandIntro = false; step = 15 }
                 Button("→ how we help") { showBrandIntro = false; step = 16 }
+                Button("→ try it now") { demoDebugCard = false; demoDebugChat = false; demoDebugReview = false; showBrandIntro = false; step = 17 }
+                Button("→ demo card") { demoDebugCard = true; demoDebugChat = false; demoDebugReview = false; showBrandIntro = false; step = 17 }
+                Button("→ chat") { demoDebugChat = true; demoDebugCard = false; demoDebugReview = false; showBrandIntro = false; step = 17 }
+                Button("→ review") { demoDebugReview = true; demoDebugCard = false; demoDebugChat = false; showBrandIntro = false; step = 17 }
             }
             .font(.custom("HelveticaNeue", size: 11))
             .foregroundColor(Color(white: 0.28))
@@ -417,6 +463,27 @@ struct OnboardingViewV2: View {
             .zIndex(300)
         }
         #endif
+
+        // Chat interface — presented as a fade overlay (not a slide-up cover),
+        // seeded with the user's question + verdict
+        if demoShowChat, let result = demoResult {
+            ChatView(
+                originalQuestion: demoInput,
+                decisionResult: result,
+                viewModel: viewModel,
+                thinkID: demoThinkID,
+                existingMessages: [],
+                onMessagesUpdated: { _ in },
+                onNewThink: nil,
+                showNextInsteadOfClose: true,
+                onClose: {
+                    withAnimation(.easeInOut(duration: 0.4)) { demoShowChat = false }
+                    startDemoFinalBeat()
+                }
+            )
+            .transition(.opacity)
+            .zIndex(400)
+        }
 
         }
         .animation(.easeInOut(duration: 0.5), value: showBrandIntro)
@@ -437,6 +504,15 @@ struct OnboardingViewV2: View {
         .sheet(isPresented: $showDocs) {
             DocsView(initialTab: docsTab)
         }
+        .fullScreenCover(isPresented: $showDownsell) {
+            DownsellWeeklyView(viewModel: viewModel) {
+                showDownsell = false
+                if !viewModel.hasActiveEntitlement {
+                    NotificationManager.shared.scheduleReEngagementNotifications()
+                }
+                advanceNoHistory()
+            }
+        }
     }
 
     // MARK: - Step content
@@ -456,7 +532,6 @@ struct OnboardingViewV2: View {
         case 9:  stepQuiz(index: 4)
         case 10: step10WhereAreYou
         case 11: step8
-        case 17: step15
         default: EmptyView()
         }
     }
@@ -497,33 +572,46 @@ struct OnboardingViewV2: View {
 
     private var step2: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Spacer().frame(height: 12)
-            Text("Your answers may be processed by AI to generate your results.")
-                .font(.custom("Poppins-Regular", size: 17))
-                .foregroundColor(.white.opacity(0.40))
-                .lineSpacing(6)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer().frame(height: 30)
-            v2Button("I understand and agree") {
-                UserDefaults.standard.set(true, forKey: "hasGivenAIConsent")
-                advance(q: anchorTexts[2], a: "Agreed")
-            }
-            Spacer().frame(height: 10)
-            HStack {
-                Spacer()
-                Button {
-                    docsTab = 1
-                    showDocs = true
-                } label: {
-                    Text("Read our privacy policy")
-                        .font(.custom("Poppins-Regular", size: 12))
-                        .foregroundColor(.white.opacity(0.24))
-                        .underline()
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer().frame(height: 12)
+                Text("Your responses are sent to Anthropic's Claude AI to generate your decision results. No data is stored or used for training.")
+                    .font(.custom("Poppins-Regular", size: 17))
+                    .foregroundColor(.white.opacity(0.40))
+                    .lineSpacing(6)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer().frame(height: 30)
+                v2Button("I understand and agree") {
+                    UserDefaults.standard.set(true, forKey: "hasGivenAIConsent")
+                    advance(q: anchorTexts[2], a: "Agreed")
                 }
-                .buttonStyle(PlainButtonStyle())
-                Spacer()
+                Spacer().frame(height: 10)
+                HStack(spacing: 24) {
+                    Button {
+                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/privacy-policy-3647cd351f5b807b9021d48d42a71a0b?source=copy_link") {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        Text("Privacy")
+                            .font(.custom("Poppins-Regular", size: 12))
+                            .foregroundColor(.white.opacity(0.40))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    Button {
+                        if let url = URL(string: "https://creative-sailfish-dc6.notion.site/Terms-and-conditions-3647cd351f5b8000b482d1062d00f0ad?source=copy_link") {
+                            UIApplication.shared.open(url)
+                        }
+                    } label: {
+                        Text("Terms")
+                            .font(.custom("Poppins-Regular", size: 12))
+                            .foregroundColor(.white.opacity(0.40))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+                .frame(maxWidth: .infinity)
             }
+            .frame(maxWidth: .infinity)
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: Step 3 — name
@@ -558,7 +646,7 @@ struct OnboardingViewV2: View {
                 .disabled(userName.trimmingCharacters(in: .whitespaces).isEmpty || isTransitioning)
         }
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                 nameFieldFocused = true
             }
         }
@@ -612,7 +700,7 @@ struct OnboardingViewV2: View {
         }
         .animation(.easeInOut(duration: 0.2), value: ageTooLow)
         .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
                 ageFieldFocused = true
             }
         }
@@ -1401,7 +1489,734 @@ struct OnboardingViewV2: View {
         .padding(.vertical, 20)
     }
 
-    // MARK: Step 20 — nudge / notifications
+    // MARK: Step 17 — interactive demo (user types, live verdict card)
+
+    private var demoInputReady: Bool {
+        demoInput.trimmingCharacters(in: .whitespacesAndNewlines).count >= 10
+    }
+
+    private var demoThinkView: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+
+            // ── Intro beat — fades in, holds, fades out (like the good/bad
+            //    news transition) before the input appears ─────────────────
+            if demoShowIntro {
+                Text("Okay — now it's your turn to experience it.")
+                    .font(.custom("Poppins-Regular", size: 19))
+                    .foregroundColor(.white)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(6)
+                    .padding(.horizontal, 40)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .opacity(demoIntroPhase >= 1 ? 1 : 0)
+            }
+
+            // ── Input (centered) — shown before Think ────────────────────
+            if demoInputVisible {
+                VStack(alignment: .leading, spacing: 0) {
+                    Spacer()
+
+                    Text("Try it now.")
+                        .font(.custom("HelveticaNeue", size: 30))
+                        .foregroundColor(.white)
+                        .padding(.bottom, 22)
+
+                    // Growing text box — expands as the user types
+                    ZStack(alignment: .topLeading) {
+                        if demoInput.isEmpty {
+                            Text("e.g. should I quit my job, move cities, end a relationship...")
+                                .font(.custom("HelveticaNeue", size: 21))
+                                .foregroundColor(.white.opacity(0.20))
+                                .padding(.vertical, 12)
+                                .allowsHitTesting(false)   // let taps reach the field
+                        }
+                        TextField("", text: $demoInput, axis: .vertical)
+                            .font(.custom("HelveticaNeue", size: 21))
+                            .foregroundColor(.white)
+                            .tint(.white)
+                            .lineLimit(1...6)
+                            .autocorrectionDisabled()
+                            .focused($demoInputFocused)
+                            .padding(.vertical, 12)
+                            .onChange(of: demoInput) { newVal in
+                                if newVal.count > 280 { demoInput = String(newVal.prefix(280)) }
+                            }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { demoInputFocused = true }
+                    .overlay(
+                        Rectangle().fill(Color.white.opacity(0.16)).frame(height: 1),
+                        alignment: .bottom
+                    )
+
+                    if demoInput.count >= 250 {
+                        Text("\(demoInput.count)/280")
+                            .font(.custom("Poppins-Regular", size: 12))
+                            .foregroundColor(.white.opacity(0.30))
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .padding(.top, 6)
+                    }
+
+                    Spacer().frame(height: 28)
+
+                    v2Button("Think") { runDemoThink() }
+                        .opacity(demoInputReady ? 1 : 0.28)
+                        .disabled(!demoInputReady || demoThinking)
+
+                    Button { advanceNoHistory() } label: {
+                        Text("skip →")
+                            .font(.custom("Poppins-Regular", size: 13))
+                            .foregroundColor(.white.opacity(0.33))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 16)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 28)
+                .transition(.opacity)
+            }
+
+            // ── Result card + Continue — shown after thinking ────────────
+            if (demoResult != nil || demoFallback) && !demoPostActive && !demoTailoredActive && !demoReviewActive {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 16)
+
+                    Group {
+                        if let result = demoResult {
+                            // Same card as the main app — flippable front (verdict)
+                            // / back deep dive, rendered identically to the story view
+                            demoFlipCard(result: result)
+                        } else {
+                            demoFallbackCard
+                        }
+                    }
+                    .aspectRatio(0.68, contentMode: .fit)
+                    .frame(maxWidth: .infinity)
+                    .frame(maxHeight: 440)
+                    .padding(.horizontal, 28)
+                    .offset(y: demoCardOffset)
+
+                    Spacer(minLength: 16)
+
+                    Button {
+                        if demoResult != nil { startDemoPostSequence() } else { advanceNoHistory() }
+                    } label: {
+                        Text("Continue →")
+                            .font(.custom("HelveticaNeue", size: 17))
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 18)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    .padding(.horizontal, 28)
+                    .padding(.bottom, 52)
+                    .opacity(demoContinueVisible ? 1 : 0)
+                    .disabled(!demoContinueVisible)
+                    .animation(.easeIn(duration: 0.4), value: demoContinueVisible)
+                }
+                .transition(.opacity)
+            }
+
+            // ── Fade in/out message beats (before and after chat) ────────
+            if demoPostActive {
+                ZStack {
+                    Text(demoPostBeatText)
+                        .font(.custom("Poppins-Regular", size: 19))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .lineSpacing(6)
+                        .padding(.horizontal, 40)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                    if demoBeatTappable {
+                        VStack {
+                            Spacer()
+                            Text("tap to continue")
+                                .font(.custom("Poppins-Regular", size: 13))
+                                .foregroundColor(.white.opacity(0.35))
+                                .padding(.bottom, 120)
+                        }
+                    }
+                }
+                .opacity(demoPostPhase >= 1 ? 1 : 0)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .onTapGesture { handleDemoBeatTap() }
+            }
+
+            // ── Structured "tailored to you" reveal (after final beat) ───
+            if demoTailoredActive {
+                demoTailoredView
+                    .transition(.opacity)
+            }
+
+            // ── Review screen — one question, then the Apple review prompt ─
+            if demoReviewActive {
+                demoReviewView
+                    .transition(.opacity)
+            }
+
+            // ── Loading — the app's real simulating state ────────────────
+            if demoThinking {
+                SimulatingView()
+                    .transition(.opacity)
+            }
+
+            // ── Follow-up question — same view the main app uses ─────────
+            if demoShowFollowUp {
+                QuestionCardView(
+                    question: demoFollowUpQ,
+                    onSubmit: { answer in submitDemoFollowUp(answer) },
+                    onSkip: { submitDemoFollowUp("") }
+                )
+                .transition(.opacity)
+            }
+        }
+        .onAppear {
+            // Shared resets
+            demoThinking = false
+            demoFallback = false
+            demoResolved = false
+            demoShowFollowUp = false
+            demoFollowUpQ = ""
+            demoPostActive = false
+            demoPostPhase = 0
+            demoPostMessage = 1
+            demoBeatTappable = false
+            demoTailoredActive = false
+            demoTailoredPhase = 0
+            demoReviewActive = false
+            demoReviewPhase = 0
+            demoReviewAdvanced = false
+            demoThinkCompleted = false
+            demoShowChat = false
+            demoLayoutIndex = 1                 // always Layout B — never changes
+            demoCardAngle = 0
+            demoTiltX = 0
+            demoThinkID = UUID()
+
+            #if DEBUG
+            // Debug entry points — jump straight to a sample card / chat / review
+            if demoDebugCard || demoDebugChat || demoDebugReview {
+                applyDemoDebug(openChat: demoDebugChat, openReview: demoDebugReview)
+                return
+            }
+            #endif
+
+            // Normal flow
+            demoInput = ""
+            demoInputVisible = false
+            demoShowIntro = true
+            demoIntroPhase = 0
+            demoResult = nil
+            demoContinueVisible = false
+            demoCardOffset = UIScreen.main.bounds.height + 200
+            // Intro message fades in, holds, fades out — then the input fades in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                withAnimation(.easeInOut(duration: 0.7)) { demoIntroPhase = 1 }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
+                withAnimation(.easeInOut(duration: 0.7)) { demoIntroPhase = 0 }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4.1) {
+                demoShowIntro = false
+                withAnimation(.easeIn(duration: 0.5)) { demoInputVisible = true }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    demoInputFocused = true
+                }
+            }
+        }
+        #if DEBUG
+        // Handle debug jumps even when already on step 17 (onAppear won't re-fire)
+        .onChange(of: demoDebugCard) { on in if on { applyDemoDebug() } }
+        .onChange(of: demoDebugChat) { on in if on { applyDemoDebug(openChat: true) } }
+        .onChange(of: demoDebugReview) { on in if on { applyDemoDebug(openReview: true) } }
+        #endif
+    }
+
+    #if DEBUG
+    private func applyDemoDebug(openChat: Bool = false, openReview: Bool = false) {
+        demoDebugCard = false
+        demoDebugChat = false
+        demoDebugReview = false
+        demoThinking = false
+        demoFallback = false
+        demoResolved = false
+        demoShowFollowUp = false
+        demoFollowUpQ = ""
+        demoPostActive = false
+        demoPostPhase = 0
+        demoPostMessage = 1
+        demoBeatTappable = false
+        demoTailoredActive = false
+        demoTailoredPhase = 0
+        demoReviewActive = false
+        demoReviewPhase = 0
+        demoReviewAdvanced = false
+        demoShowChat = false
+        demoShowIntro = false
+        demoIntroPhase = 0
+        demoInputVisible = false
+        demoCardAngle = 0
+        demoTiltX = 0
+        demoLayoutIndex = 1
+        demoThinkID = UUID()
+        demoInput = "should I take the job offer in a new city?"
+        demoResult = demoSampleResult()
+        demoThinkCompleted = true          // debug jumps simulate a completed think
+        demoContinueVisible = true
+        demoCardOffset = 0
+        if openReview {
+            withAnimation(.easeIn(duration: 0.4)) { demoReviewActive = true }
+        } else if openChat {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                withAnimation(.easeInOut(duration: 0.4)) { demoShowChat = true }
+            }
+        }
+    }
+    #endif
+
+    // Sample fully-populated result — DEBUG only, for the card/chat jump buttons.
+    #if DEBUG
+    private func demoSampleResult() -> DecisionResult {
+        let json = """
+        {
+          "verdict": "Take the offer — but negotiate a start date that lets you land on your feet.",
+          "confidence": 74,
+          "simulationCount": 1000,
+          "mode": "DECISION",
+          "reasoning": "A better role in a new city is rarely just about the job — it's about who you become in it. The upside here is real and the downside is mostly recoverable. Protect the transition and the move pays off.",
+          "whyPoints": ["the role itself is a clear step up", "a fresh city resets stale patterns", "the downside is recoverable, the upside compounds"],
+          "tradeoffs": ["leaving a known support system behind", "short-term disruption for long-term growth", "proximity to family vs. proximity to opportunity"],
+          "majorityOutcomes": [
+            {"percentage": 46, "title": "Pays off", "explanation": "The role and the change accelerate you within a year"},
+            {"percentage": 21, "title": "Slow settle", "explanation": "Great job, but the city takes time to feel like home"},
+            {"percentage": 9, "title": "Homesick", "explanation": "The distance weighs more than expected"}
+          ],
+          "minorityOutcomes": [
+            {"percentage": 14, "title": "Breakout", "explanation": "The move opens doors you couldn't see from here"},
+            {"percentage": 6, "title": "Regret", "explanation": "What you left behind mattered more than the title"},
+            {"percentage": 4, "title": "Boomerang", "explanation": "You return later, but wiser for having gone"}
+          ],
+          "patternNote": "",
+          "whatYoureNotSaying": "You already want to go. You're really asking whether it's okay to choose yourself here.",
+          "whatUsuallyHelps": "Name the one thing that would make leaving feel safe, then build that into the offer.",
+          "needsAmbientQuestion": false,
+          "ambientQuestion": "",
+          "archetype": {
+            "name": "The Builder",
+            "description": "you move when the evidence is there.",
+            "percentage": 19
+          }
+        }
+        """.data(using: .utf8)!
+        if let r = try? JSONDecoder().decode(DecisionResult.self, from: json) { return r }
+        return .mock
+    }
+    #endif
+
+    private var demoPostBeatText: String {
+        switch demoPostMessage {
+        case 1:  return "It's not over yet."
+        case 2:  return "The verdict is only step one.\nEvery decision has nuance.\nKeep exploring until it feels right."
+        default: return "It doesn't stop there."
+        }
+    }
+
+    // After chat closes: "It doesn't stop there." beat → structured reveal screen.
+    private func startDemoFinalBeat() {
+        demoShowChat = false
+        demoBeatTappable = false
+        demoTailoredActive = false
+        demoTailoredPhase = 0
+        demoPostMessage = 3
+        demoPostPhase = 0
+        withAnimation(.easeInOut(duration: 0.4)) { demoPostActive = true }
+        // "It doesn't stop there." — fade in, hold, fade out
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            withAnimation(.easeInOut(duration: 0.7)) { demoPostPhase = 1 }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            withAnimation(.easeInOut(duration: 0.7)) { demoPostPhase = 0 }
+        }
+        // Switch to the structured left-aligned reveal
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.9) {
+            demoPostActive = false
+            withAnimation(.easeIn(duration: 0.5)) { demoTailoredActive = true }
+            startDemoTailoredReveal()
+        }
+    }
+
+    // Reveal the "every decision teaches Bracket …" screen line by line.
+    private func startDemoTailoredReveal() {
+        let steps = 6   // heading + 4 timeline dots + closing line
+        for phase in 1...steps {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5 + Double(phase) * 0.6) {
+                withAnimation(.easeInOut(duration: 0.5)) { demoTailoredPhase = phase }
+            }
+        }
+        // Enable tap-to-continue after the last line lands
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5 + Double(steps) * 0.6 + 0.6) {
+            demoBeatTappable = true
+        }
+    }
+
+    // Left-aligned: heading, a vertical line connecting dots, closing line.
+    private var demoTailoredView: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer()
+
+                Text("Every decision teaches Bracket")
+                    .font(.custom("HelveticaNeue", size: 24))
+                    .foregroundColor(.white)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .opacity(demoTailoredPhase >= 1 ? 1 : 0)
+                    .padding(.bottom, 26)
+
+                // Vertical timeline — dots connected by a single vertical line
+                VStack(alignment: .leading, spacing: 0) {
+                    demoTailoredRow("How you think",                 visible: demoTailoredPhase >= 2)
+                    demoTailoredRow("What you value",                visible: demoTailoredPhase >= 3)
+                    demoTailoredRow("The choices you make",          visible: demoTailoredPhase >= 4)
+                    demoTailoredRow("The patterns of your thoughts", visible: demoTailoredPhase >= 5, isLast: true)
+                }
+
+                Text("So every verdict becomes more tailored to you.")
+                    .font(.custom("Poppins-Regular", size: 17))
+                    .foregroundColor(.white)
+                    .lineSpacing(4)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .opacity(demoTailoredPhase >= 6 ? 1 : 0)
+                    .padding(.top, 26)
+
+                Spacer()
+
+                Button { goToDemoReview() } label: {
+                    Text("Continue")
+                        .font(.custom("HelveticaNeue", size: 17))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.bottom, 40)
+                .opacity(demoBeatTappable ? 1 : 0)
+                .disabled(!demoBeatTappable)
+                .animation(.easeIn(duration: 0.4), value: demoBeatTappable)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 36)
+        }
+    }
+
+    private func goToDemoReview() {
+        demoBeatTappable = false
+        // Cross-fade in one step so the card never peeks through the gap
+        withAnimation(.easeInOut(duration: 0.5)) {
+            demoTailoredActive = false
+            demoReviewActive = true
+        }
+    }
+
+    // One timeline row: a dot, a vertical connector that grows into the next dot.
+    private func demoTailoredRow(_ text: String, visible: Bool, isLast: Bool = false) -> some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(spacing: 0) {
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 9, height: 9)
+                    .padding(.top, 5)
+                    .opacity(visible ? 1 : 0)
+                    .scaleEffect(visible ? 1 : 0.4)
+                if !isLast {
+                    Rectangle()
+                        .fill(Color(white: 0.28))
+                        .frame(width: 1.5, height: 34)
+                        // Line grows downward from this dot toward the next one
+                        .scaleEffect(x: 1, y: visible ? 1 : 0, anchor: .top)
+                }
+            }
+            Text(text)
+                .font(.custom("HelveticaNeue", size: 18))
+                .foregroundColor(.white.opacity(0.85))
+                .padding(.bottom, isLast ? 0 : 26)
+                .opacity(visible ? 1 : 0)
+            Spacer()
+        }
+    }
+
+    // Review screen — one question, then the Apple review prompt pops.
+    private var demoReviewView: some View {
+        ZStack {
+            Color.black.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: 0) {
+                Spacer().frame(height: 90)
+                Text("One question.")
+                    .font(.custom("HelveticaNeue", size: 30))
+                    .foregroundColor(.white)
+                    .opacity(demoReviewPhase >= 1 ? 1 : 0)
+                Spacer().frame(height: 14)
+                Text("How did that experience feel?")
+                    .font(.custom("Poppins-Regular", size: 17))
+                    .foregroundColor(.white.opacity(0.5))
+                    .opacity(demoReviewPhase >= 2 ? 1 : 0)
+                Spacer()
+                Button { advanceFromReview() } label: {
+                    Text("Continue")
+                        .font(.custom("HelveticaNeue", size: 17))
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 18)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+                .buttonStyle(PlainButtonStyle())
+                .padding(.bottom, 40)
+                .opacity(demoReviewPhase >= 3 ? 1 : 0)
+                .disabled(demoReviewPhase < 3)
+                .animation(.easeIn(duration: 0.4), value: demoReviewPhase)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 36)
+        }
+        .onAppear {
+            demoReviewPhase = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                withAnimation(.easeInOut(duration: 0.6)) { demoReviewPhase = 1 }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+                withAnimation(.easeInOut(duration: 0.6)) { demoReviewPhase = 2 }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
+                triggerReviewPrompt()
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
+                withAnimation(.easeInOut(duration: 0.6)) { demoReviewPhase = 3 }
+            }
+        }
+    }
+
+    // Single-shot advance from the review screen (guards Continue vs auto-advance).
+    private func advanceFromReview() {
+        guard !demoReviewAdvanced else { return }
+        demoReviewAdvanced = true
+        advanceNoHistory()
+    }
+
+    private func triggerReviewPrompt() {
+        // Only ask people who actually experienced a completed think — never skippers.
+        guard demoThinkCompleted else { return }
+        if let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+            SKStoreReviewController.requestReview(in: scene)
+        }
+    }
+
+    // After the card's Continue: beat 1 auto-fades, beat 2 waits for a tap → chat.
+    private func startDemoPostSequence() {
+        demoBeatTappable = false
+        demoPostMessage = 1
+        demoPostPhase = 0
+        withAnimation(.easeInOut(duration: 0.5)) { demoPostActive = true }
+        // Beat 1 (short) — auto in → out
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            withAnimation(.easeInOut(duration: 0.7)) { demoPostPhase = 1 }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.9) {
+            withAnimation(.easeInOut(duration: 0.7)) { demoPostPhase = 0 }
+        }
+        // Beat 2 — fade in, then wait for a tap
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.8) {
+            demoPostMessage = 2
+            withAnimation(.easeInOut(duration: 0.7)) { demoPostPhase = 1 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { demoBeatTappable = true }
+        }
+    }
+
+    // Tap handler for the tap-to-continue beats (message 2 → chat, 3 → advance).
+    private func handleDemoBeatTap() {
+        guard demoBeatTappable else { return }
+        demoBeatTappable = false
+        let msg = demoPostMessage
+        withAnimation(.easeInOut(duration: 0.6)) { demoPostPhase = 0 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            if msg == 2 {
+                withAnimation(.easeInOut(duration: 0.4)) { demoShowChat = true }
+            } else {
+                advanceNoHistory()
+            }
+        }
+    }
+
+    // Fallback card — shown only after several real failures.
+    private var demoFallbackCard: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 10).fill(Color.black)
+                .overlay(RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
+            Text("something went wrong — but your decision is worth thinking through properly. keep going.")
+                .font(.custom("Poppins-Regular", size: 16))
+                .foregroundColor(.white.opacity(0.7))
+                .multilineTextAlignment(.center)
+                .lineSpacing(5)
+                .padding(.horizontal, 26)
+        }
+        .shadow(color: Color.white.opacity(0.06), radius: 24, x: 0, y: 0)
+    }
+
+    private func runDemoThink() {
+        let q = demoInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard q.count >= 10, !demoThinking, demoResult == nil, !demoFallback, !demoShowFollowUp else { return }
+        demoInputFocused = false
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        demoResolved = false
+        withAnimation(.easeOut(duration: 0.3)) { demoInputVisible = false }
+        withAnimation(.easeIn(duration: 0.4)) { demoThinking = true }
+        // Full app flow: firstPass (triage — may ask a follow-up) → secondPass.
+        // Uses the exact same client + Haiku model the app uses. Retries a few
+        // times before ever falling back so a transient failure never surfaces.
+        Task {
+            var fp: FirstPassResponse? = nil
+            for attempt in 0..<4 {
+                if let r = try? await APIClient.shared.firstPass(question: q, useHaiku: true) {
+                    fp = r
+                    break
+                }
+                if attempt < 3 { try? await Task.sleep(nanoseconds: 800_000_000) }
+            }
+            guard let fp = fp else {
+                await MainActor.run { resolveDemoThink(result: nil) }
+                return
+            }
+            if fp.needsQuestion && !fp.question.trimmingCharacters(in: .whitespaces).isEmpty {
+                await MainActor.run {
+                    demoFollowUpQ = fp.question
+                    withAnimation(.easeInOut(duration: 0.4)) { demoThinking = false }
+                    withAnimation(.easeIn(duration: 0.35)) { demoShowFollowUp = true }
+                }
+            } else {
+                await runDemoSecondPass(question: q, answer: "")
+            }
+        }
+    }
+
+    private func submitDemoFollowUp(_ answer: String) {
+        let q = demoInput.trimmingCharacters(in: .whitespacesAndNewlines)
+        Task { await runDemoSecondPass(question: q, answer: answer) }
+    }
+
+    private func runDemoSecondPass(question q: String, answer: String) async {
+        await MainActor.run {
+            withAnimation(.easeOut(duration: 0.3)) { demoShowFollowUp = false }
+            withAnimation(.easeIn(duration: 0.4)) { demoThinking = true }
+        }
+        var result: DecisionResult? = nil
+        for attempt in 0..<4 {
+            if let r = try? await APIClient.shared.secondPass(question: q, followUpAnswer: answer, useHaiku: true) {
+                result = r
+                break
+            }
+            if attempt < 3 { try? await Task.sleep(nanoseconds: 800_000_000) }
+        }
+        await MainActor.run { resolveDemoThink(result: result) }
+    }
+
+    private func resolveDemoThink(result: DecisionResult?) {
+        guard !demoResolved else { return }
+        demoResolved = true
+        if let result = result {
+            demoResult = result
+            demoLayoutIndex = 1
+            demoThinkCompleted = true      // real think finished → review is earned
+        } else {
+            demoFallback = true
+        }
+        withAnimation(.easeInOut(duration: 0.4)) { demoThinking = false }
+        // Card slides up — same spring as the main-app result card
+        withAnimation(.spring(response: 1.0, dampingFraction: 0.85)) { demoCardOffset = 0 }
+        // Continue fades in 1.5s after the card content loads
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            demoContinueVisible = true
+        }
+    }
+
+    // Flippable card — mirrors DecisionCardView.floatGlow: front verdict card,
+    // back deep dive (Why / Trade offs), drag-to-rotate + tap-to-flip.
+    private var demoFrontVisible: Bool { cos(demoCardAngle * .pi / 180) >= 0 }
+
+    private func demoFlipCard(result: DecisionResult) -> some View {
+        ZStack {
+            CardBackView(
+                result: result,
+                originalQuestion: demoInput,
+                viewModel: viewModel,
+                thinkID: demoThinkID,
+                layoutIndex: demoLayoutIndex,
+                existingChatMessages: [],
+                onChatMessagesUpdated: { _ in },
+                onNewThink: nil,
+                onScrollingChanged: { demoBackScrolling = $0 },
+                compact: true
+            )
+            .overlay(RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
+            .rotation3DEffect(.degrees(demoCardAngle + 180), axis: (0, 1, 0), perspective: 1.1)
+            .opacity(demoFrontVisible ? 0 : 1)
+
+            DecisionCard(result: result, layoutIndex: demoLayoutIndex)
+                .overlay(RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
+                .rotation3DEffect(.degrees(demoCardAngle), axis: (0, 1, 0), perspective: 1.1)
+                .opacity(demoFrontVisible ? 1 : 0)
+        }
+        .rotation3DEffect(.degrees(demoTiltX), axis: (1, 0, 0), perspective: 0.6)
+        .gesture(demoCardGesture)
+        .shadow(color: Color.white.opacity(0.06), radius: 24, x: 0, y: 0)
+    }
+
+    private var demoCardGesture: some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { v in
+                if !demoDragStarted {
+                    demoDragStarted = true
+                    demoDragBase = demoCardAngle
+                }
+                demoCardAngle = demoDragBase + Double(v.translation.width) * 0.55
+                withAnimation(.interactiveSpring()) {
+                    demoTiltX = max(-18, min(18, Double(-v.translation.height / 5)))
+                }
+            }
+            .onEnded { v in
+                let wasDrag = abs(v.translation.width) > 8
+                demoDragStarted = false
+                if wasDrag {
+                    let velocity = Double(v.predictedEndTranslation.width - v.translation.width)
+                    let snapped  = (demoCardAngle / 180).rounded() * 180
+                    let raw      = abs(velocity) > 300
+                        ? (velocity > 0 ? snapped + 180 : snapped - 180)
+                        : snapped
+                    let target = demoDragBase + max(-180.0, min(180.0, raw - demoDragBase))
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.68)) {
+                        demoCardAngle = target
+                        demoTiltX = 0
+                    }
+                } else {
+                    withAnimation(.spring(response: 0.38, dampingFraction: 0.68)) { demoTiltX = 0 }
+                    withAnimation(.easeInOut(duration: 0.44)) { demoCardAngle += 180 }
+                }
+            }
+    }
+
+    // MARK: Step 21 — nudge / notifications
 
     private var nudgeView: some View {
         let teal = Color(red: 0.18, green: 0.78, blue: 0.72)
@@ -1441,7 +2256,15 @@ struct OnboardingViewV2: View {
                 Spacer()
 
                 v2Button("Continue") {
-                    v2RequestNotifications { advanceNoHistory() }
+                    v2RequestNotifications {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                            if viewModel.hasActiveEntitlement {
+                                advanceNoHistory()
+                            } else {
+                                showDownsell = true
+                            }
+                        }
+                    }
                 }
                 .padding(.horizontal, 28)
                 .padding(.bottom, 48)
@@ -1459,20 +2282,6 @@ struct OnboardingViewV2: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
                 withAnimation(.easeInOut(duration: 0.6)) { nudgePhase = 3 }
             }
-        }
-    }
-
-    // MARK: Step 17 — brain calibrated
-
-    private var step15: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Spacer().frame(height: 12)
-            Text("Personalised to the way you think.")
-                .font(.custom("Poppins-Regular", size: 15))
-                .foregroundColor(.white.opacity(0.30))
-        }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) { advanceNoHistory() }
         }
     }
 
@@ -1628,7 +2437,7 @@ struct OnboardingViewV2: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Spacer(minLength: 16).frame(maxHeight: isPad ? 384 : .infinity)
+                Spacer(minLength: 16).frame(maxHeight: isPad ? (UIScreen.main.bounds.width > 900 ? 480 : 320) : .infinity)
 
                 // BOTTOM content
                 VStack(alignment: .leading, spacing: 0) {
@@ -1655,10 +2464,10 @@ struct OnboardingViewV2: View {
                     }
 
                     VStack(spacing: 8) {
-                        pwPlanCard(0, "PRO — Unlimited", "\(paywallProMonthly)/mo", "Billed annually at \(paywallProPrice)",
+                        pwPlanCard(0, "PRO — Unlimited", "\(paywallProPrice)/year", "That's \(paywallProMonthly)/mo",
                                    ["unlimited thinks", "deeper simulations", "pattern memory"],
                                    "", true)
-                        pwPlanCard(1, "CORE", "\(paywallCoreMonthly)/mo", "Billed every 6 months at \(paywallCorePrice)",
+                        pwPlanCard(1, "CORE", "\(paywallCorePrice)/6mo", "That's \(paywallCoreMonthly)/mo",
                                    ["300 thinks", "full simulation access", "pattern tracking"],
                                    "")
                     }
@@ -1699,16 +2508,12 @@ struct OnboardingViewV2: View {
                     .buttonStyle(PlainButtonStyle())
                     .padding(.top, 12)
 
-                    HStack(spacing: 6) {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundColor(Color(white: 0.36))
-                        Text(selectedPlan == 0 ? "7 days free. Cancel anytime." : "One-time payment. 300 thinks.")
-                            .font(.custom("Poppins-Regular", size: 12))
-                            .foregroundColor(Color(white: 0.36))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
+                    Text("Subscription auto-renews. Cancel anytime.")
+                        .font(.custom("Poppins-Regular", size: 12))
+                        .foregroundColor(Color(white: 0.25))
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 6)
 
                     HStack(spacing: 32) {
                         Button {
@@ -1727,7 +2532,7 @@ struct OnboardingViewV2: View {
                                 }
                             }
                         } label: {
-                            Text("Restore").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
+                            Text("Restore").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.25))
                         }
                         .buttonStyle(PlainButtonStyle())
                         Button {
@@ -1735,7 +2540,7 @@ struct OnboardingViewV2: View {
                                 UIApplication.shared.open(url)
                             }
                         } label: {
-                            Text("Privacy").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
+                            Text("Privacy").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.25))
                         }
                         .buttonStyle(PlainButtonStyle())
                         Button {
@@ -1743,7 +2548,7 @@ struct OnboardingViewV2: View {
                                 UIApplication.shared.open(url)
                             }
                         } label: {
-                            Text("Terms").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.4))
+                            Text("Terms").font(.custom("Poppins-Regular", size: 12)).foregroundColor(Color(white: 0.25))
                         }
                         .buttonStyle(PlainButtonStyle())
                     }
@@ -1759,11 +2564,7 @@ struct OnboardingViewV2: View {
             .overlay(alignment: .topTrailing) {
                 Button {
                     PostHogSDK.shared.capture("paywall_skipped")
-                    if viewModel.hasActiveEntitlement {
-                        advanceNoHistory()
-                    } else {
-                        showDownsell = true
-                    }
+                    advanceNoHistory()
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .medium))
@@ -1807,18 +2608,6 @@ struct OnboardingViewV2: View {
                 advanceNoHistory()
             }
         }
-        .background(
-            EmptyView()
-                .fullScreenCover(isPresented: $showDownsell) {
-                    DownsellWeeklyView(viewModel: viewModel) {
-                        showDownsell = false
-                        if !viewModel.hasActiveEntitlement {
-                            NotificationManager.shared.scheduleReEngagementNotifications()
-                        }
-                        advanceNoHistory()
-                    }
-                }
-        )
     }
 
     private func pwPlanCard(_ idx: Int, _ title: String, _ price: String, _ badge: String, _ features: [String] = [], _ billingLine: String = "", _ mostPopular: Bool = false) -> some View {
@@ -1832,7 +2621,7 @@ struct OnboardingViewV2: View {
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
                         Text(price).font(.custom("HelveticaNeue-Bold", size: 16)).foregroundColor(.white)
-                        Text(badge).font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.45))
+                        Text(badge).font(.custom("Poppins-Regular", size: 11)).foregroundColor(Color(white: 0.55))
                     }
                 }
                 if sel && !features.isEmpty {
@@ -2613,14 +3402,13 @@ struct OnboardingViewV2: View {
         typingGeneration += 1
         let gen = typingGeneration
         contentVisible = false
-        let specialSteps = [12, 13, 14, 15, 16, 18, 19, 20, 21]
+        let specialSteps = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21]
         if specialSteps.contains(step) { return }
         guard step < anchorTexts.count else { return }
         let name = userName.trimmingCharacters(in: .whitespaces)
         var text = anchorTexts[step]
         if !name.isEmpty {
             if step == 11 { text = "building your brain, \(name)." }
-            if step == 17 { text = "your brain\nis calibrated, \(name)." }
         }
         typedText = ""
         let chars = Array(text)
@@ -2632,6 +3420,14 @@ struct OnboardingViewV2: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                         guard typingGeneration == gen else { return }
                         withAnimation(.easeIn(duration: 0.3)) { contentVisible = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            guard typingGeneration == gen else { return }
+                            if step == 3 { nameFieldFocused = true }
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            guard typingGeneration == gen else { return }
+                            if step == 4 { ageFieldFocused = true }
+                        }
                     }
                 }
             }
@@ -2651,7 +3447,7 @@ struct OnboardingViewV2: View {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { typedText = "" }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.38) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             isTransitioning = false
             step += 1
             UserDefaults.standard.set(step, forKey: Constants.onboardingProgressKey)
@@ -2739,7 +3535,7 @@ struct OnboardingViewV2: View {
         case 14: return "values"
         case 15: return "risk_tolerance"
         case 16: return "support"
-        case 17: return "time_horizon"
+        case 17: return "interactive_demo"
         case 18: return "emotion_regulation"
         case 19: return "past_decisions"
         case 20: return "future_vision"

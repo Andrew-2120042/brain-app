@@ -9,6 +9,12 @@ struct CardBackView: View {
     let onChatMessagesUpdated: ([ChatBubble]) -> Void
     var onNewThink: (() -> Void)? = nil
     var onScrollingChanged: ((Bool) -> Void)? = nil
+    // Opt-in smaller Why / Trade offs text (used only by the onboarding demo).
+    // Defaults to false so the in-app card renders exactly as before.
+    var compact: Bool = false
+
+    private var sectionHeaderSize: CGFloat { compact ? 20 : 24 }
+    private var sectionPointSize: CGFloat { compact ? 12 : 14 }
 
     @State private var showStories = false
     @State private var showChat = false
@@ -30,7 +36,8 @@ struct CardBackView: View {
          existingChatMessages: [ChatBubble],
          onChatMessagesUpdated: @escaping ([ChatBubble]) -> Void,
          onNewThink: (() -> Void)? = nil,
-         onScrollingChanged: ((Bool) -> Void)? = nil) {
+         onScrollingChanged: ((Bool) -> Void)? = nil,
+         compact: Bool = false) {
         self.result = result
         self.originalQuestion = originalQuestion
         self._viewModel = ObservedObject(initialValue: viewModel)
@@ -40,6 +47,7 @@ struct CardBackView: View {
         self.onNewThink = onNewThink
         self.onScrollingChanged = onScrollingChanged
         self._chatMessages = State(initialValue: existingChatMessages)
+        self.compact = compact
     }
 
     private var isBoundaryResponse: Bool {
@@ -101,17 +109,17 @@ struct CardBackView: View {
                         // Why
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Why")
-                                .font(.custom("Poppins-Regular", size: 24))
+                                .font(.custom("Poppins-Regular", size: sectionHeaderSize))
                                 .foregroundColor(.white)
 
                             VStack(alignment: .leading, spacing: 6) {
                                 ForEach(result.why, id: \.self) { point in
                                     HStack(alignment: .top, spacing: 8) {
                                         Text("•")
-                                            .font(.custom("Poppins-Regular", size: 14))
+                                            .font(.custom("Poppins-Regular", size: sectionPointSize))
                                             .foregroundColor(Color(white: 0.5))
                                         Text(point)
-                                            .font(.custom("Poppins-Regular", size: 14))
+                                            .font(.custom("Poppins-Regular", size: sectionPointSize))
                                             .foregroundColor(Color(white: 0.5))
                                             .fixedSize(horizontal: false, vertical: true)
                                     }
@@ -126,17 +134,17 @@ struct CardBackView: View {
                         // Trade offs
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Trade offs")
-                                .font(.custom("Poppins-Regular", size: 24))
+                                .font(.custom("Poppins-Regular", size: sectionHeaderSize))
                                 .foregroundColor(.white)
 
                             VStack(alignment: .leading, spacing: 6) {
                                 ForEach(result.tradeoffs, id: \.self) { point in
                                     HStack(alignment: .top, spacing: 8) {
                                         Text("•")
-                                            .font(.custom("Poppins-Regular", size: 14))
+                                            .font(.custom("Poppins-Regular", size: sectionPointSize))
                                             .foregroundColor(Color(white: 0.5))
                                         Text(point)
-                                            .font(.custom("Poppins-Regular", size: 14))
+                                            .font(.custom("Poppins-Regular", size: sectionPointSize))
                                             .foregroundColor(Color(white: 0.5))
                                             .fixedSize(horizontal: false, vertical: true)
                                     }
@@ -160,7 +168,8 @@ struct CardBackView: View {
                 // ── Fixed buttons ─────────────────────────────────
                 VStack(spacing: 8) {
                     #if DEBUG
-                    if !viewModel.hideDebugUI {
+                    // Hidden on the onboarding demo card (compact)
+                    if !viewModel.hideDebugUI && !compact {
                         Button { debugForceVerdict.toggle() } label: {
                             Text("VERB")
                                 .font(.system(size: 11, weight: .semibold))
@@ -173,38 +182,41 @@ struct CardBackView: View {
                     }
                     #endif
 
-                    Button { if canChat { showChat = true } else { showPaywall = true } } label: {
-                        HStack {
-                            Text("chat about this")
-                                .font(.custom("Poppins-Regular", size: 15))
-                                .foregroundColor(canChat ? .white : Color(white: 0.4))
-                            Spacer()
-                            if !canChat {
-                                Image(systemName: "lock.fill")
-                                    .font(.system(size: 12))
-                                    .foregroundColor(Color(white: 0.4))
+                    // "chat about this" hidden on the onboarding demo card (compact)
+                    if !compact {
+                        Button { if canChat { showChat = true } else { showPaywall = true } } label: {
+                            HStack {
+                                Text("chat about this")
+                                    .font(.custom("Poppins-Regular", size: 15))
+                                    .foregroundColor(canChat ? .white : Color(white: 0.4))
+                                Spacer()
+                                if !canChat {
+                                    Image(systemName: "lock.fill")
+                                        .font(.system(size: 12))
+                                        .foregroundColor(Color(white: 0.4))
+                                }
                             }
+                            .padding(.horizontal, 22)
+                            .padding(.vertical, 16)
+                            .background(Color(red: 0.039, green: 0.039, blue: 0.039))
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(canChat ? Color.white : Color(white: 0.25), lineWidth: 1))
                         }
-                        .padding(.horizontal, 22)
-                        .padding(.vertical, 16)
-                        .background(Color(red: 0.039, green: 0.039, blue: 0.039))
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(canChat ? Color.white : Color(white: 0.25), lineWidth: 1))
+                        .buttonStyle(PlainButtonStyle())
                     }
-                    .buttonStyle(PlainButtonStyle())
 
                     Button { showStories = true } label: {
                         HStack {
                             Text("view full report")
-                                .font(.custom("Poppins-Regular", size: 15))
+                                .font(.custom("Poppins-Regular", size: compact ? 13 : 15))
                                 .foregroundColor(.black)
                             Spacer()
                             Image(systemName: "arrow.right")
-                                .font(.system(size: 15, weight: .medium))
+                                .font(.system(size: compact ? 13 : 15, weight: .medium))
                                 .foregroundColor(.black)
                         }
-                        .padding(.horizontal, 22)
-                        .padding(.vertical, 16)
+                        .padding(.horizontal, compact ? 18 : 22)
+                        .padding(.vertical, compact ? 11 : 16)
                         .background(Color.white)
                         .clipShape(Capsule())
                     }

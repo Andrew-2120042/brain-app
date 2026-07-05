@@ -69,10 +69,16 @@ struct PaywallView: View {
 
                 Spacer(minLength: 16)
 
+                Text("Subscription auto-renews. Cancel anytime.")
+                    .font(.custom("HelveticaNeue", size: 12))
+                    .foregroundColor(Color(white: 0.35))
+                    .multilineTextAlignment(.center)
+                    .padding(.bottom, 8)
+
                 VStack(spacing: 14) {
-                    paywallPlanCard(index: 2, productId: "com.brainla.bomb.pro.weekly", title: "WEEKLY", price: "\(weeklyDaily)/day", subtitle: "7 Days Free Trial", detail: "Cancel Anytime", isProBadge: false, priceCaption: "Billed weekly at \(weeklyPrice)")
-                    paywallPlanCard(index: 0, productId: "com.brainla.bomb.core.sixmonths.v2", title: "CORE", price: "\(coreMonthly)/mo", subtitle: "300 Thinks", detail: "Everything Unlocked", isProBadge: false, priceCaption: "Billed every 6 months at \(corePrice)")
-                    paywallPlanCard(index: 1, productId: "com.brainla.bomb.pro.annual.v2", title: "PRO", price: "\(proMonthly)/mo", subtitle: "Unlimited Thinks", detail: "Chat + Full Memory", isProBadge: true, priceCaption: "Billed annually at \(proPrice)")
+                    paywallPlanCard(index: 2, productId: "com.brainla.bomb.pro.weekly", title: "WEEKLY", price: "\(weeklyPrice)/week", subtitle: "7 Days Free Trial", detail: "Cancel Anytime", isProBadge: false, priceCaption: "That's \(weeklyDaily)/day")
+                    paywallPlanCard(index: 0, productId: "com.brainla.bomb.core.sixmonths.v2", title: "CORE", price: "\(corePrice)/6mo", subtitle: "300 Thinks", detail: "Everything Unlocked", isProBadge: false, priceCaption: "That's \(coreMonthly)/mo")
+                    paywallPlanCard(index: 1, productId: "com.brainla.bomb.pro.annual.v2", title: "PRO", price: "\(proPrice)/year", subtitle: "Unlimited Thinks", detail: "Chat + Full Memory", isProBadge: true, priceCaption: "That's \(proMonthly)/mo")
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)
@@ -122,23 +128,23 @@ struct PaywallView: View {
                 }
                 .disabled(viewModel.isLoadingPurchase)
                 .padding(.horizontal, 24)
-                .padding(.bottom, 12)
+                .padding(.bottom, 8)
 
                 if selectedPlan == 1 {
                     Text("7 Days Free, Then \(proPrice)/Year. Cancel Anytime.")
                         .font(.custom("HelveticaNeue", size: 13))
-                        .foregroundColor(Color(white: 0.4))
-                        .padding(.bottom, 8)
+                        .foregroundColor(Color(white: 0.3))
+                        .padding(.bottom, 4)
                 } else if selectedPlan == 2 {
                     Text("7 Days Free, Then \(weeklyPrice)/Week. Cancel Anytime.")
                         .font(.custom("HelveticaNeue", size: 13))
-                        .foregroundColor(Color(white: 0.4))
-                        .padding(.bottom, 8)
+                        .foregroundColor(Color(white: 0.3))
+                        .padding(.bottom, 4)
                 } else {
                     Text("300 Thinks. \(corePrice) For 6 Months. Cancel Anytime.")
                         .font(.custom("HelveticaNeue", size: 13))
-                        .foregroundColor(Color(white: 0.4))
-                        .padding(.bottom, 8)
+                        .foregroundColor(Color(white: 0.3))
+                        .padding(.bottom, 4)
                 }
 
                 HStack(spacing: 16) {
@@ -313,8 +319,8 @@ struct PaywallView: View {
                         .foregroundColor(.white)
                     if let priceCaption {
                         Text(priceCaption)
-                            .font(.custom("HelveticaNeue", size: 12))
-                            .foregroundColor(Color(white: 0.4))
+                            .font(.custom("HelveticaNeue", size: 11))
+                            .foregroundColor(Color(white: 0.55))
                     }
                 }
             }
